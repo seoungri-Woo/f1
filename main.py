@@ -2,266 +2,415 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="F1 2D Racing & Spoiler Simulator",
+    page_title="F1 3D Real Racing & Aerodynamics",
     page_icon="🏎️",
     layout="wide"
 )
 
-st.title("🏎️ F1 2D 키보드 레이싱 게임 & 에어로다이나믹스")
+st.title("🏎️ F1 3D 3인칭 레이싱 시뮬레이터")
 st.markdown("""
-**[조작 방법]**
-- **방향키 위(↑) / 아래(↓):** 가속 / 브레이크 및 후진
-- **방향키 좌(←) / 우(→):** 조향 (핸들링)
-- **리어 윙 각도 조절:** 아래 슬라이더로 윙 각도를 조절하면 **최고 속도**와 **코너링 접지력**이 실시간으로 변합니다!
+**[게임 조작 방법]**
+- **방향키 (↑ / ↓ / ← / →) 또는 WASD:** 가속 / 브레이크 및 후진 / 핸들 조향
+- **스페이스바 (Space):** 리어 윙 각도 4단계 전환 (**0° ➔ 15° ➔ 30° ➔ 40°**)
+- **리어 윙 물리 엔진:** 
+  - **0° (직선 특화):** 최대 속도 증가, 코너링 시 접지력 저하 (접지력 부족 시 미끄러짐)
+  - **40° (코너 특화):** 코너링 고속 안정성 증가, 최고 속도 감소 (공기저항 증가)
 """)
 
-# HTML5 Canvas + JS F1 Game Code
-game_html = """
+# HTML5 + Three.js 3D Racing Engine
+game_3d_html = """
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8">
     <style>
         body {
             margin: 0;
-            background-color: #1a1a1a;
-            color: white;
+            padding: 0;
+            overflow: hidden;
+            background-color: #050505;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            user-select: none;
         }
-        #gameContainer {
+        #canvas-container {
+            width: 100vw;
+            height: 600px;
             position: relative;
-            margin-top: 10px;
         }
-        canvas {
-            border: 3px solid #444;
-            border-radius: 8px;
-            background-color: #2e7d32; /* Track Grass */
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-        }
-        .ui-panel {
+        
+        /* Glassmorphism HUD Overlay */
+        .hud-panel {
+            position: absolute;
+            top: 15px;
+            left: 20px;
             display: flex;
-            gap: 20px;
-            background: #2b2b2b;
-            padding: 12px 25px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            align-items: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            gap: 15px;
+            background: rgba(20, 20, 20, 0.75);
+            backdrop-filter: blur(8px);
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: white;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            z-index: 5;
         }
-        .ui-item {
-            font-size: 16px;
+        .hud-item {
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .hud-value {
+            color: #ffcc00;
+            font-weight: bold;
+            font-size: 17px;
+        }
+
+        /* Wing Badge Indicator */
+        .wing-badge {
+            background: #e63946;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 6px;
             font-weight: bold;
         }
-        .ui-value {
-            color: #ffcc00;
-        }
-        /* Summary Modal Overlay */
+
+        /* Race Summary Modal */
         #summaryModal {
             display: none;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(20, 20, 20, 0.95);
+            background: rgba(15, 15, 15, 0.95);
             border: 2px solid #ffcc00;
-            padding: 25px;
-            border-radius: 15px;
+            padding: 30px;
+            border-radius: 16px;
             text-align: center;
-            width: 320px;
-            box-shadow: 0 0 30px rgba(255, 204, 0, 0.4);
-            z-index: 10;
+            width: 350px;
+            box-shadow: 0 0 50px rgba(255, 204, 0, 0.5);
+            z-index: 100;
+            color: white;
         }
-        #summaryModal h2 { color: #ffcc00; margin-top: 0; }
+        #summaryModal h2 { color: #ffcc00; margin-top: 0; font-size: 24px; }
         .stat-box {
-            background: #333;
-            margin: 8px 0;
-            padding: 10px;
+            background: #222;
+            margin: 10px 0;
+            padding: 12px;
             border-radius: 8px;
             text-align: left;
+            border: 1px solid #333;
         }
         .btn-restart {
             background: #ffcc00;
-            color: black;
+            color: #000;
             border: none;
-            padding: 10px 20px;
-            font-weight: bold;
+            padding: 12px 25px;
             font-size: 16px;
-            border-radius: 5px;
+            font-weight: bold;
+            border-radius: 8px;
             cursor: pointer;
             margin-top: 15px;
+            transition: all 0.2s;
         }
         .btn-restart:hover {
-            background: #e6b800;
+            background: #ffd633;
+            transform: scale(1.05);
         }
     </style>
+    <!-- Three.js 3D Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div class="ui-panel">
-        <div class="ui-item">🔧 리어 윙 각도: <input type="range" id="wingSlider" min="0" max="40" value="15" oninput="updateWing(this.value)"> <span id="wingVal" class="ui-value">15°</span></div>
-        <div class="ui-item">⚡ 속도: <span id="speedVal" class="ui-value">0</span> km/h</div>
-        <div class="ui-item">🚩 Current Lap: <span id="lapVal" class="ui-value">1 / 3</span></div>
-        <div class="ui-item">⏱️ Time: <span id="timeVal" class="ui-value">0.00s</span></div>
-    </div>
+    <div id="canvas-container">
+        <!-- HUD Overlay -->
+        <div class="hud-panel">
+            <div class="hud-item">🔧 리어 윙 각도 [Space]: <span id="wingBadge" class="wing-badge">15°</span></div>
+            <div class="hud-item">⚡ 속도: <span id="speedVal" class="hud-value">0</span> km/h</div>
+            <div class="hud-item">🚩 Laps: <span id="lapVal" class="hud-value">1 / 3</span></div>
+            <div class="hud-item">⏱️ 현재 랩: <span id="timeVal" class="hud-value">0.00s</span></div>
+        </div>
 
-    <div id="gameContainer">
-        <canvas id="raceCanvas" width="800" height="500"></canvas>
-        
+        <!-- Finish Modal -->
         <div id="summaryModal">
             <h2>🏁 레이스 종료!</h2>
             <div class="stat-box">🏆 <b>최단 랩타임 (Best):</b> <span id="bestLap" style="color:#4caf50;">-</span></div>
             <div class="stat-box">🐢 <b>최장 랩타임 (Worst):</b> <span id="worstLap" style="color:#f44336;">-</span></div>
-            <div class="stat-box">📊 <b>랩별 기록:</b><div id="lapHistory" style="font-size:13px; margin-top:5px; color:#aaa;"></div></div>
+            <div class="stat-box">📊 <b>각 랩별 기록:</b><div id="lapHistory" style="font-size:14px; margin-top:6px; color:#ccc;"></div></div>
             <button class="btn-restart" onclick="resetGame()">다시 도전하기</button>
         </div>
     </div>
 
 <script>
-const canvas = document.getElementById('raceCanvas');
-const ctx = canvas.getContext('2d');
+// --- Three.js & Setup ---
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb); // Sky blue
+scene.fog = new THREE.FogExp2(0x87ceeb, 0.003);
 
-// --- Game Variables ---
+const camera = new THREE.PerspectiveCamera(60, container.clientWidth / 600, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(container.clientWidth, 600);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
+
+// --- Lighting ---
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(100, 150, 50);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.width = 2048;
+dirLight.shadow.mapSize.height = 2048;
+dirLight.shadow.camera.near = 10;
+dirLight.shadow.camera.far = 400;
+dirLight.shadow.camera.left = -150;
+dirLight.shadow.camera.right = 150;
+dirLight.shadow.camera.top = 150;
+dirLight.shadow.camera.bottom = -150;
+scene.add(dirLight);
+
+// --- Track Circuit Definition ---
+const trackCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 0, 100),
+    new THREE.Vector3(120, 0, 100),
+    new THREE.Vector3(180, 0, 40),
+    new THREE.Vector3(150, 0, -80),
+    new THREE.Vector3(60, 0, -120),
+    new THREE.Vector3(-60, 0, -120),
+    new THREE.Vector3(-150, 0, -60),
+    new THREE.Vector3(-120, 0, 40)
+], true, 'catmullrom', 0.2);
+
+// Ground (Grass)
+const grassGeo = new THREE.PlaneGeometry(1000, 1000);
+const grassMat = new THREE.MeshLambertMaterial({ color: 0x2e7d32 });
+const grass = new THREE.Mesh(grassGeo, grassMat);
+grass.rotation.x = -Math.PI / 2;
+grass.position.y = -0.1;
+grass.receiveShadow = true;
+scene.add(grass);
+
+// Track Mesh
+const trackGeometry = new THREE.TubeGeometry(trackCurve, 120, 16, 2, true);
+const trackMaterial = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
+trackMesh.scale.set(1, 0.01, 1); // Flatten to asphalt road
+trackMesh.receiveShadow = true;
+scene.add(trackMesh);
+
+// Finish Line Banner
+const finishLineGeo = new THREE.BoxGeometry(20, 0.1, 4);
+const finishLineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const finishLine = new THREE.Mesh(finishLineGeo, finishLineMat);
+finishLine.position.set(0, 0.05, 100);
+scene.add(finishLine);
+
+// --- F1 Car Construction ---
+const carGroup = new THREE.Group();
+
+// Body Chassis
+const bodyGeo = new THREE.BoxGeometry(2, 0.8, 5);
+const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe63946, roughness: 0.3, metalness: 0.5 });
+const body = new THREE.Mesh(bodyGeo, bodyMat);
+body.position.y = 0.6;
+body.castShadow = true;
+carGroup.add(body);
+
+// Cockpit
+const cockpitGeo = new THREE.SphereGeometry(0.6, 16, 16);
+const cockpitMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+const cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
+cockpit.position.set(0, 0.9, -0.2);
+carGroup.add(cockpit);
+
+// Front Wing
+const fWingGeo = new THREE.BoxGeometry(3.2, 0.1, 0.8);
+const wingMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+const fWing = new THREE.Mesh(fWingGeo, wingMat);
+fWing.position.set(0, 0.3, 2.5);
+fWing.castShadow = true;
+carGroup.add(fWing);
+
+// Adjustable Rear Wing Group
+const rearWingGroup = new THREE.Group();
+rearWingGroup.position.set(0, 1.1, -2.3);
+
+const rWingMain = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.15, 0.8), new THREE.MeshStandardMaterial({ color: 0xffcc00 }));
+rWingMain.castShadow = true;
+rearWingGroup.add(rWingMain);
+
+const rWingPillar1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.6, 0.1), wingMat);
+rWingPillar1.position.set(-0.8, -0.3, 0);
+rearWingGroup.add(rWingPillar1);
+const rWingPillar2 = rWingPillar1.clone();
+rWingPillar2.position.set(0.8, -0.3, 0);
+rearWingGroup.add(rWingPillar2);
+
+carGroup.add(rearWingGroup);
+
+// Wheels
+const wheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 16);
+const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.9 });
+
+const wheels = [];
+const wheelPositions = [
+    [-1.2, 0.5, 1.8], [1.2, 0.5, 1.8],
+    [-1.2, 0.5, -1.8], [1.2, 0.5, -1.8]
+];
+
+wheelPositions.forEach(pos => {
+    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(...pos);
+    wheel.castShadow = true;
+    carGroup.add(wheel);
+    wheels.push(wheel);
+});
+
+scene.add(carGroup);
+
+// Initial Car Position
+carGroup.position.set(0, 0, 100);
+
+// --- Game Physics & Aerodynamics Logic ---
+const wingPresetAngles = [0, 15, 30, 40];
+let wingPresetIndex = 1; // Default 15deg
 let wingAngle = 15;
+
+let speed = 0;
+let carAngle = -Math.PI / 2; // Facing along start line
 let keys = {};
 
-// Car State
-let car = {
-    x: 400,
-    y: 430,
-    angle: 0, // Radians
-    speed: 0,
-    accel: 0.15,
-    friction: 0.97
-};
-
-// Track Parameters (Oval with chicanes)
-const outerTrack = [
-    {x: 150, y: 470}, {x: 650, y: 470}, {x: 750, y: 370}, 
-    {x: 750, y: 130}, {x: 650, y: 30}, {x: 150, y: 30}, 
-    {x: 50, y: 130}, {x: 50, y: 370}
-];
-
-const innerTrack = [
-    {x: 180, y: 390}, {x: 620, y: 390}, {x: 670, y: 320}, 
-    {x: 670, y: 180}, {x: 620, y: 110}, {x: 180, y: 110}, 
-    {x: 130, y: 180}, {x: 130, y: 320}
-];
-
-// Lap & Time Logic
+// Race State
 let currentLap = 1;
 const maxLaps = 3;
-let startTime = Date.now();
 let lapStartTime = Date.now();
 let lapTimes = [];
 let checkpointPassed = false;
 let isFinished = false;
 
-// Event Listeners for Keys
+// Key Handlers
 window.addEventListener('keydown', e => {
-    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) {
+    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","KeyW","KeyS","KeyA","KeyD"].includes(e.code)) {
         e.preventDefault();
     }
-    keys[e.key] = true;
-});
-window.addEventListener('keyup', e => keys[e.key] = false);
-
-function updateWing(val) {
-    wingAngle = parseInt(val);
-    document.getElementById('wingVal').innerText = val + '°';
-}
-
-// Check if point inside polygon
-function isPointInPoly(poly, pt) {
-    let c = false;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-        if (((poly[i].y > pt.y) !== (poly[j].y > pt.y)) &&
-            (pt.x < (poly[j].x - poly[i].x) * (pt.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)) {
-            c = !c;
-        }
+    
+    // Spacebar toggles 4 Wing Angles: 0 -> 15 -> 30 -> 40
+    if (e.code === 'Space' && !e.repeat) {
+        wingPresetIndex = (wingPresetIndex + 1) % wingPresetAngles.length;
+        wingAngle = wingPresetAngles[wingPresetIndex];
+        
+        // Update Rear Wing visual tilt
+        rearWingGroup.rotation.x = (wingAngle * Math.PI) / 180;
+        document.getElementById('wingBadge').innerText = wingAngle + '°';
     }
-    return c;
-}
+    
+    keys[e.code] = true;
+});
 
-function checkTrackBounds(x, y) {
-    const inOuter = isPointInPoly(outerTrack, {x, y});
-    const inInner = isPointInPoly(innerTrack, {x, y});
-    return inOuter && !inInner; // Valid on track if inside outer but outside inner
-}
+window.addEventListener('keyup', e => keys[e.code] = false);
 
 function updatePhysics() {
     if (isFinished) return;
 
-    // Aerodynamics Mechanics: Wing Angle Tradeoff
-    // Higher wing angle = Lower top speed (high drag), but higher grip & turning speed
-    const maxSpeed = 10 - (wingAngle / 40) * 3.5; // Top Speed: 10 (0°) -> 6.5 (40°)
-    const grip = 0.02 + (wingAngle / 40) * 0.035;   // Steering Responsiveness/Grip
+    // Aerodynamic Math Equations
+    // Drag reduces max top speed
+    const maxSpeed = 2.2 - (wingAngle / 40) * 0.7; // 0° -> 2.2 (~180km/h), 40° -> 1.5 (~120km/h)
+    
+    // Downforce increases steering grip / response
+    const turnGrip = 0.015 + (wingAngle / 40) * 0.02;
 
-    // Acceleration & Braking
-    if (keys['ArrowUp']) {
-        car.speed += car.accel;
-    } else if (keys['ArrowDown']) {
-        car.speed -= car.accel * 0.8;
+    // Acceleration & Braking Controls
+    if (keys['ArrowUp'] || keys['KeyW']) {
+        speed += 0.02;
+    } else if (keys['ArrowDown'] || keys['KeyS']) {
+        speed -= 0.025;
     } else {
-        car.speed *= car.friction;
+        speed *= 0.96; // Friction
     }
 
-    // Clamp speed based on wing angle
-    if (car.speed > maxSpeed) car.speed = maxSpeed;
-    if (car.speed < -maxSpeed * 0.3) car.speed = -maxSpeed * 0.3;
+    // Speed Cap
+    if (speed > maxSpeed) speed = maxSpeed;
+    if (speed < -maxSpeed * 0.3) speed = -maxSpeed * 0.3;
 
-    // Off-track penalty (Grass)
-    const onTrack = checkTrackBounds(car.x, car.y);
-    if (!onTrack) {
-        car.speed *= 0.85; // Heavy drag on grass
+    // Distance to Track Centerline (Off-Track Check)
+    const carPos = carGroup.position;
+    const closestPoint = trackCurve.getPointAt((getTrackProgress(carPos) % 1));
+    const distToCenter = carPos.distanceTo(closestPoint);
+    
+    if (distToCenter > 14) {
+        speed *= 0.85; // Off-track grass penalty
     }
 
-    // Steering
-    if (Math.abs(car.speed) > 0.1) {
-        const dir = car.speed > 0 ? 1 : -1;
-        if (keys['ArrowLeft']) car.angle -= grip * dir;
-        if (keys['ArrowRight']) car.angle += grip * dir;
+    // Steering Adjustment
+    if (Math.abs(speed) > 0.05) {
+        const dir = speed > 0 ? 1 : -1;
+        if (keys['ArrowLeft'] || keys['KeyA']) carAngle += turnGrip * dir;
+        if (keys['ArrowRight'] || keys['KeyD']) carAngle -= turnGrip * dir;
     }
 
-    // Movement
-    car.x += Math.cos(car.angle) * car.speed;
-    car.y += Math.sin(car.angle) * car.speed;
+    // Movement Vector
+    carGroup.position.x += Math.sin(carAngle) * speed;
+    carGroup.position.z += Math.cos(carAngle) * speed;
+    carGroup.rotation.y = carAngle;
 
-    // Checkpoint & Finish Line Logic
-    // Halfway Checkpoint (x ~ 400, y ~ 70 top straight)
-    if (car.y < 120 && car.x > 300 && car.x < 500) {
+    // Rotate Wheels during movement
+    wheels.forEach(w => w.rotation.x += speed * 0.5);
+
+    // 3rd Person Chase Camera Logic
+    const camOffset = new THREE.Vector3(0, 6, -16).applyAxisAngle(new THREE.Vector3(0, 1, 0), carAngle);
+    camera.position.copy(carGroup.position).add(camOffset);
+    camera.lookAt(carGroup.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
+
+    // Checkpoints & Laps
+    if (carGroup.position.z < -90) {
         checkpointPassed = true;
     }
 
-    // Finish Line crossing (bottom straight: x ~ 400, y between 390 and 470)
-    if (checkpointPassed && car.x > 390 && car.x < 410 && car.y > 390 && car.y < 470) {
+    // Crossing Finish Line (z >= 100, x around 0)
+    if (checkpointPassed && Math.abs(carGroup.position.x) < 20 && carGroup.position.z > 95) {
         const now = Date.now();
         const lapTime = (now - lapStartTime) / 1000;
         lapTimes.push(lapTime);
         
         checkpointPassed = false;
         lapStartTime = now;
-        
+
         if (currentLap < maxLaps) {
             currentLap++;
             document.getElementById('lapVal').innerText = `${currentLap} / ${maxLaps}`;
         } else {
-            // Race Finish
             isFinished = true;
-            showSummary();
+            showSummaryModal();
         }
     }
 
-    // UI Updates
-    document.getElementById('speedVal').innerText = Math.round(Math.abs(car.speed) * 32);
+    // HUD Update
+    document.getElementById('speedVal').innerText = Math.round(Math.abs(speed) * 85);
     if (!isFinished) {
         const currentLapTimer = ((Date.now() - lapStartTime) / 1000).toFixed(2);
         document.getElementById('timeVal').innerText = `${currentLapTimer}s`;
     }
 }
 
-function showSummary() {
+// Approximate position on track loop
+function getTrackProgress(pos) {
+    let minDist = Infinity;
+    let closestT = 0;
+    for (let t = 0; t <= 1; t += 0.02) {
+        const pt = trackCurve.getPointAt(t);
+        const d = pt.distanceTo(pos);
+        if (d < minDist) {
+            minDist = d;
+            closestT = t;
+        }
+    }
+    return closestT;
+}
+
+function showSummaryModal() {
     const best = Math.min(...lapTimes).toFixed(2);
     const worst = Math.max(...lapTimes).toFixed(2);
     
@@ -282,94 +431,31 @@ function resetGame() {
     lapTimes = [];
     isFinished = false;
     checkpointPassed = false;
-    car.x = 400;
-    car.y = 430;
-    car.angle = 0;
-    car.speed = 0;
+    
+    carGroup.position.set(0, 0, 100);
+    carAngle = -Math.PI / 2;
+    speed = 0;
     
     document.getElementById('lapVal').innerText = `1 / ${maxLaps}`;
     document.getElementById('summaryModal').style.display = 'none';
     lapStartTime = Date.now();
 }
 
-function drawTrack() {
-    // Clear Canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw Asphalt Track
-    ctx.beginPath();
-    ctx.moveTo(outerTrack[0].x, outerTrack[0].y);
-    for (let i = 1; i < outerTrack.length; i++) ctx.lineTo(outerTrack[i].x, outerTrack[i].y);
-    ctx.closePath();
-    ctx.fillStyle = '#333';
-    ctx.fill();
-
-    // Cut out inner island (Grass)
-    ctx.beginPath();
-    ctx.moveTo(innerTrack[0].x, innerTrack[0].y);
-    for (let i = 1; i < innerTrack.length; i++) ctx.lineTo(innerTrack[i].x, innerTrack[i].y);
-    ctx.closePath();
-    ctx.fillStyle = '#2e7d32';
-    ctx.fill();
-
-    // Start/Finish Line
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 6;
-    ctx.setLineDash([8, 8]);
-    ctx.beginPath();
-    ctx.moveTo(400, 390);
-    ctx.lineTo(400, 470);
-    ctx.stroke();
-    ctx.setLineDash([]); // Reset dash
-}
-
-function drawCar() {
-    ctx.save();
-    ctx.translate(car.x, car.y);
-    ctx.rotate(car.angle);
-
-    // Car Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.fillRect(-12, -7, 26, 16);
-
-    // F1 Car Body (Red)
-    ctx.fillStyle = '#e63946';
-    ctx.fillRect(-12, -5, 24, 10);
-
-    // Front Wing
-    ctx.fillStyle = '#111';
-    ctx.fillRect(10, -8, 4, 16);
-
-    // Rear Wing (Changes size/style based on wing angle)
-    const wingVisualWidth = 2 + (wingAngle / 40) * 4;
-    ctx.fillStyle = '#ffcc00';
-    ctx.fillRect(-14, -7, wingVisualWidth, 14);
-
-    // Wheels
-    ctx.fillStyle = '#000';
-    ctx.fillRect(4, -8, 6, 3);
-    ctx.fillRect(4, 5, 6, 3);
-    ctx.fillRect(-10, -8, 6, 3);
-    ctx.fillRect(-10, 5, 6, 3);
-
-    ctx.restore();
-}
-
-function gameLoop() {
+// Render Loop
+function animate() {
+    requestAnimationFrame(animate);
     updatePhysics();
-    drawTrack();
-    drawCar();
-    requestAnimationFrame(gameLoop);
+    renderer.render(scene, camera);
 }
 
-// Start Game Loop
+// Start
 lapStartTime = Date.now();
-gameLoop();
+animate();
 
 </script>
 </body>
 </html>
 """
 
-# Render Component
-components.html(game_html, height=620)
+# Render Component inside Streamlit
+components.html(game_3d_html, height=620)
