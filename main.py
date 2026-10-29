@@ -7,14 +7,15 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🏎️ F1 3D 서킷 레이싱 & 에어로다이나믹스 시뮬레이터")
+st.title("🏎️ REAL F1 서킷 레이싱 & 에어로다이나믹스 시뮬레이터")
 st.markdown("""
-**[개선된 게임 조작법]**
-- **방향키 (↑ / ↓ / ← / →) 또는 WASD:** 가속 / 브레이크 및 후진 / **부드러운 핸들 조향**
-- **스페이스바 (Space):** 리어 윙 4단계 즉시 전환 (**0° ➔ 15° ➔ 30° ➔ 40°**)
-- **F1 튜닝 체감 포인트:**
-  - 🚀 **0° (직선 세팅):** 메인 직선에서 **최대 260 km/h** 돌파! 단, 코너에서 꺾이지 않고 밖으로 밀려남.
-  - 📐 **40° (코너 세팅):** 속도는 **130 km/h**로 제한되지만, 급헤어핀 코너를 레일 탄 듯 깔끔하게 탈출.
+**[조작법]**
+- **방향키 (↑ / ↓ / ← / →) 또는 WASD:** 가속 / 브레이크 / **부드러운 핸들 조향**
+- **스페이스바 (Space):** 리어 윙 4단계 전환 (**0° ➔ 15° ➔ 30° ➔ 40°**)
+- **F1 트랙 체감 포인트:**
+  - 🏎️ **넓은 아스팔트 도로 & 코너 연석:** 코너 진입 시 연석을 활용해 최단 라인(In-Course)을 타고 탈출하세요.
+  - 🚀 **0° (직선 세팅):** 메인 직선에서 **최대 260 km/h** 극대화!
+  - 📐 **40° (코너 세팅):** 최고 속도는 제한되지만, 급코너에서도 미끄러지지 않는 다운포스 확보.
 """)
 
 # HTML5 + Three.js Real Circuit Engine
@@ -28,7 +29,7 @@ game_3d_html = """
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background-color: #080808;
+            background-color: #050505;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             user-select: none;
         }
@@ -115,7 +116,7 @@ game_3d_html = """
             transform: scale(1.05);
         }
     </style>
-    <!-- Three.js 3D Engine -->
+    <!-- Three.js Engine -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
@@ -140,11 +141,11 @@ game_3d_html = """
     </div>
 
 <script>
-// --- Three.js Initialization ---
+// --- Three.js Setup ---
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x6ca6cd); // Realistic Atmosphere Sky
-scene.fog = new THREE.FogExp2(0x6ca6cd, 0.002);
+scene.background = new THREE.Color(0x6ca6cd);
+scene.fog = new THREE.FogExp2(0x6ca6cd, 0.0018);
 
 const camera = new THREE.PerspectiveCamera(55, container.clientWidth / 620, 0.1, 1500);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -154,7 +155,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 container.appendChild(renderer.domElement);
 
 // --- Lighting ---
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
 scene.add(ambientLight);
 
 const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
@@ -170,99 +171,199 @@ dirLight.shadow.camera.top = 300;
 dirLight.shadow.camera.bottom = -300;
 scene.add(dirLight);
 
-// --- Realistic F1 Circuit Waypoints (Monza / Spa Hybrid Layout) ---
-const trackPoints = [
-    new THREE.Vector3(0, 0, 220),       // Main Straight / Finish Line
-    new THREE.Vector3(250, 0, 220),     // High Speed Straight End
-    new THREE.Vector3(320, 0, 150),     // Turn 1 Right
-    new THREE.Vector3(300, 0, 50),      // Chicane Left
-    new THREE.Vector3(350, 0, -50),     // Hairpin Entry
-    new THREE.Vector3(280, 0, -180),    // Tight Hairpin Apex
-    new THREE.Vector3(120, 0, -220),    // Back Straight
-    new THREE.Vector3(-100, 0, -220),   // High Speed Sweeper
-    new THREE.Vector3(-250, 0, -120),   // S-Curve 1
-    new THREE.Vector3(-200, 0, -20),    // S-Curve 2
-    new THREE.Vector3(-280, 0, 80),     // Parabolica Entry
-    new THREE.Vector3(-220, 0, 180),    // Parabolica Exit
-    new THREE.Vector3(-100, 0, 220)     // Final Corner to Main Straight
-];
-
-const trackCurve = new THREE.CatmullRomCurve3(trackPoints, true, 'catmullrom', 0.25);
-
 // Ground (Grass)
-const grassGeo = new THREE.PlaneGeometry(2000, 2000);
-const grassMat = new THREE.MeshLambertMaterial({ color: 0x235225 });
+const grassGeo = new THREE.PlaneGeometry(2500, 2500);
+const grassMat = new THREE.MeshLambertMaterial({ color: 0x225522 });
 const grass = new THREE.Mesh(grassGeo, grassMat);
 grass.rotation.x = -Math.PI / 2;
-grass.position.y = -0.1;
+grass.position.y = -0.05;
 grass.receiveShadow = true;
 scene.add(grass);
 
-// Asphalt Track Surface
-const trackGeometry = new THREE.TubeGeometry(trackCurve, 250, 22, 2, true);
-const trackMaterial = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.85 });
-const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
-trackMesh.scale.set(1, 0.01, 1);
-trackMesh.receiveShadow = true;
-scene.add(trackMesh);
+// --- Real F1 Circuit Geometry Generator ---
+const trackPoints = [
+    new THREE.Vector3(0, 0, 220),       // Main Straight
+    new THREE.Vector3(260, 0, 220),     // Turn 1
+    new THREE.Vector3(340, 0, 140),     // Chicane
+    new THREE.Vector3(300, 0, 30),      
+    new THREE.Vector3(360, 0, -80),     // Hairpin
+    new THREE.Vector3(250, 0, -220),    
+    new THREE.Vector3(80, 0, -240),     // Back Straight
+    new THREE.Vector3(-120, 0, -240),   // High-speed Sweeper
+    new THREE.Vector3(-280, 0, -120),   // S-Curve
+    new THREE.Vector3(-220, 0, 20),     
+    new THREE.Vector3(-300, 0, 120),    // Parabolica
+    new THREE.Vector3(-200, 0, 220)     // Final Straight Entry
+];
 
-// Finish Line Banner & Structure
-const finishLineGeo = new THREE.BoxGeometry(26, 0.2, 5);
-const finishLineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-const finishLine = new THREE.Mesh(finishLineGeo, finishLineMat);
-finishLine.position.set(0, 0.05, 220);
-scene.add(finishLine);
+const trackCurve = new THREE.CatmullRomCurve3(trackPoints, true, 'catmullrom', 0.25);
+const SEGMENTS = 400;
+const ROAD_WIDTH = 28; // 넓은 아스팔트 도로 폭
 
-// --- F1 Car Construction ---
+function buildCircuit() {
+    const points = trackCurve.getSpacedPoints(SEGMENTS);
+    
+    // Road & Kerb Geometry Arrays
+    const roadVertices = [];
+    const roadUvs = [];
+    const roadIndices = [];
+    
+    const kerbVertices = [];
+    const kerbColors = [];
+    const kerbIndices = [];
+
+    let kIdx = 0;
+
+    for (let i = 0; i <= SEGMENTS; i++) {
+        const p1 = points[i % SEGMENTS];
+        const p2 = points[(i + 1) % SEGMENTS];
+
+        // Normal direction vector
+        const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
+        const norm = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+
+        // Left / Right Road Edges
+        const lRoad = new THREE.Vector3().addVectors(p1, norm.clone().multiplyScalar(ROAD_WIDTH / 2));
+        const rRoad = new THREE.Vector3().addVectors(p1, norm.clone().multiplyScalar(-ROAD_WIDTH / 2));
+
+        roadVertices.push(lRoad.x, 0.01, lRoad.z);
+        roadVertices.push(rRoad.x, 0.01, rRoad.z);
+        roadUvs.push(0, i / SEGMENTS * 20);
+        roadUvs.push(1, i / SEGMENTS * 20);
+
+        if (i < SEGMENTS) {
+            const row1 = i * 2;
+            const row2 = (i + 1) * 2;
+            roadIndices.push(row1, row1 + 1, row2);
+            roadIndices.push(row1 + 1, row2 + 1, row2);
+        }
+
+        // Left & Right Red/White Kerbs (연석)
+        const lKerbOuter = new THREE.Vector3().addVectors(p1, norm.clone().multiplyScalar(ROAD_WIDTH / 2 + 2.5));
+        const rKerbOuter = new THREE.Vector3().addVectors(p1, norm.clone().multiplyScalar(-ROAD_WIDTH / 2 - 2.5));
+
+        const isRed = (Math.floor(i / 2) % 2 === 0);
+        const color = isRed ? [0.9, 0.1, 0.1] : [0.95, 0.95, 0.95];
+
+        // Left Kerb
+        kerbVertices.push(lRoad.x, 0.02, lRoad.z, lKerbOuter.x, 0.02, lKerbOuter.z);
+        kerbColors.push(...color, ...color);
+
+        // Right Kerb
+        kerbVertices.push(rRoad.x, 0.02, rRoad.z, rKerbOuter.x, 0.02, rKerbOuter.z);
+        kerbColors.push(...color, ...color);
+
+        if (i < SEGMENTS) {
+            const base = i * 4;
+            const next = (i + 1) * 4;
+            // Left Kerb Triangles
+            kerbIndices.push(base, base + 1, next);
+            kerbIndices.push(base + 1, next + 1, next);
+            // Right Kerb Triangles
+            kerbIndices.push(base + 2, base + 3, next + 2);
+            kerbIndices.push(base + 3, next + 3, next + 2);
+        }
+    }
+
+    // Road Mesh
+    const roadGeo = new THREE.BufferGeometry();
+    roadGeo.setAttribute('position', new THREE.Float32BufferAttribute(roadVertices, 3));
+    roadGeo.setAttribute('uv', new THREE.Float32BufferAttribute(roadUvs, 2));
+    roadGeo.setIndex(roadIndices);
+    roadGeo.computeVertexNormals();
+
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.9 });
+    const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+    roadMesh.receiveShadow = true;
+    scene.add(roadMesh);
+
+    // Kerb Mesh
+    const kerbGeo = new THREE.BufferGeometry();
+    kerbGeo.setAttribute('position', new THREE.Float32BufferAttribute(kerbVertices, 3));
+    kerbGeo.setAttribute('color', new THREE.Float32BufferAttribute(kerbColors, 3));
+    kerbGeo.setIndex(kerbIndices);
+    
+    const kerbMat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    const kerbMesh = new THREE.Mesh(kerbGeo, kerbMat);
+    scene.add(kerbMesh);
+}
+
+buildCircuit();
+
+// --- Finish Line Gantry (결승선 아치) ---
+const gantryGroup = new THREE.Group();
+gantryGroup.position.set(0, 0, 220);
+
+const p1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 12, 1.5), new THREE.MeshStandardMaterial({ color: 0x444444 }));
+p1.position.set(-ROAD_WIDTH/2 - 2, 6, 0);
+const p2 = p1.clone();
+p2.position.set(ROAD_WIDTH/2 + 2, 6, 0);
+
+const topBeam = new THREE.Mesh(new THREE.BoxGeometry(ROAD_WIDTH + 6, 2, 2), new THREE.MeshStandardMaterial({ color: 0xe63946 }));
+topBeam.position.set(0, 11, 0);
+
+gantryGroup.add(p1, p2, topBeam);
+scene.add(gantryGroup);
+
+// Finish Line Road Stripe
+const finishLineGeo = new THREE.PlaneGeometry(ROAD_WIDTH, 6);
+const finishLineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+const finishLineMesh = new THREE.Mesh(finishLineGeo, finishLineMat);
+finishLineMesh.rotation.x = -Math.PI / 2;
+finishLineMesh.position.set(0, 0.03, 220);
+scene.add(finishLineMesh);
+
+
+// --- Detailed F1 Car Model ---
 const carGroup = new THREE.Group();
 
-// Main Chassis
-const bodyGeo = new THREE.BoxGeometry(2.2, 0.7, 5.2);
+// Main Body
+const bodyGeo = new THREE.BoxGeometry(2.4, 0.75, 5.4);
 const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe63946, roughness: 0.2, metalness: 0.6 });
 const body = new THREE.Mesh(bodyGeo, bodyMat);
-body.position.y = 0.55;
+body.position.y = 0.6;
 body.castShadow = true;
 carGroup.add(body);
 
-// Cockpit Nose & Driver Helmet
-const cockpitGeo = new THREE.SphereGeometry(0.55, 16, 16);
+// Driver Helmet & Cockpit
+const cockpitGeo = new THREE.SphereGeometry(0.6, 16, 16);
 const cockpitMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
 const cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
-cockpit.position.set(0, 0.85, -0.2);
+cockpit.position.set(0, 0.9, -0.2);
 carGroup.add(cockpit);
 
 // Front Wing
-const fWingGeo = new THREE.BoxGeometry(3.6, 0.12, 0.9);
+const fWingGeo = new THREE.BoxGeometry(3.8, 0.12, 1.0);
 const wingMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
 const fWing = new THREE.Mesh(fWingGeo, wingMat);
-fWing.position.set(0, 0.3, 2.6);
+fWing.position.set(0, 0.35, 2.7);
 fWing.castShadow = true;
 carGroup.add(fWing);
 
-// Adjustable Rear Wing
+// Adjustable Rear Wing Group
 const rearWingGroup = new THREE.Group();
-rearWingGroup.position.set(0, 1.15, -2.4);
+rearWingGroup.position.set(0, 1.2, -2.5);
 
-const rWingMain = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.18, 0.9), new THREE.MeshStandardMaterial({ color: 0xffcc00 }));
+const rWingMain = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.2, 1.0), new THREE.MeshStandardMaterial({ color: 0xffcc00 }));
 rWingMain.castShadow = true;
 rearWingGroup.add(rWingMain);
 
-const rWingPillar1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.6, 0.12), wingMat);
-rWingPillar1.position.set(-0.9, -0.3, 0);
+const rWingPillar1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.65, 0.12), wingMat);
+rWingPillar1.position.set(-1.0, -0.3, 0);
 rearWingGroup.add(rWingPillar1);
 const rWingPillar2 = rWingPillar1.clone();
-rWingPillar2.position.set(0.9, -0.3, 0);
+rWingPillar2.position.set(1.0, -0.3, 0);
 rearWingGroup.add(rWingPillar2);
 
 carGroup.add(rearWingGroup);
 
 // Wheels
-const wheelGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.45, 16);
+const wheelGeo = new THREE.CylinderGeometry(0.6, 0.6, 0.5, 16);
 const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0d0d0d, roughness: 0.9 });
 const wheels = [];
 const wheelPositions = [
-    [-1.3, 0.55, 1.8], [1.3, 0.55, 1.8],
-    [-1.3, 0.55, -1.8], [1.3, 0.55, -1.8]
+    [-1.4, 0.6, 1.9], [1.4, 0.6, 1.9],
+    [-1.4, 0.6, -1.9], [1.4, 0.6, -1.9]
 ];
 
 wheelPositions.forEach(pos => {
@@ -277,14 +378,15 @@ wheelPositions.forEach(pos => {
 scene.add(carGroup);
 carGroup.position.set(0, 0, 220); // Initial start position
 
-// --- Game Physics & Aerodynamics Logic ---
+
+// --- Physics & Aerodynamics Logic ---
 const wingPresetAngles = [0, 15, 30, 40];
 let wingPresetIndex = 1; // Default 15deg
 let wingAngle = 15;
 
 let speed = 0;
-let carAngle = -Math.PI / 2; // Facing direction
-let steerSmooth = 0; // Smooth steering inertia variable
+let carAngle = -Math.PI / 2; // Facing Direction
+let steerSmooth = 0;
 let keys = {};
 
 // Race State
@@ -295,18 +397,18 @@ let lapTimes = [];
 let checkpointPassed = false;
 let isFinished = false;
 
-// Key Handlers
+// Event Handlers
 window.addEventListener('keydown', e => {
     if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","KeyW","KeyS","KeyA","KeyD"].includes(e.code)) {
         e.preventDefault();
     }
     
-    // Spacebar toggles Wing Angles
+    // Spacebar toggles 4 Wing Angles
     if (e.code === 'Space' && !e.repeat) {
         wingPresetIndex = (wingPresetIndex + 1) % wingPresetAngles.length;
         wingAngle = wingPresetAngles[wingPresetIndex];
         
-        // Tilt Rear Wing
+        // Tilt Rear Wing 3D Model
         rearWingGroup.rotation.x = (wingAngle * Math.PI) / 180;
         document.getElementById('wingBadge').innerText = wingAngle + '°';
     }
@@ -319,30 +421,27 @@ window.addEventListener('keyup', e => keys[e.code] = false);
 function updatePhysics() {
     if (isFinished) return;
 
-    // Aerodynamics Tuning (Distinct Speed & Grip Differences)
-    // 0°: Top Speed ~260km/h (maxSpeed 0.98), Low Corner Grip (grip 0.009)
-    // 40°: Top Speed ~130km/h (maxSpeed 0.50), Ultra High Grip (grip 0.026)
+    // Aerodynamics Tuning (0° -> Max Speed ~260km/h, 40° -> Max Speed ~130km/h)
     const maxSpeed = 0.98 - (wingAngle / 40) * 0.48;
     const gripFactor = 0.009 + (wingAngle / 40) * 0.017;
 
-    // Acceleration & Braking
+    // Accel & Brake Controls
     if (keys['ArrowUp'] || keys['KeyW']) {
         speed += 0.008;
     } else if (keys['ArrowDown'] || keys['KeyS']) {
         speed -= 0.012;
     } else {
-        speed *= 0.985; // Friction decay
+        speed *= 0.985;
     }
 
-    // Speed Limit
+    // Speed Cap
     if (speed > maxSpeed) speed = maxSpeed;
     if (speed < -maxSpeed * 0.3) speed = -maxSpeed * 0.3;
 
-    // Smooth Steering Inertia Logic (Prevents sudden sharp turns)
+    // Smooth Steering Inertia
     const steerTarget = (keys['ArrowLeft'] || keys['KeyA']) ? 1 : ((keys['ArrowRight'] || keys['KeyD']) ? -1 : 0);
-    steerSmooth += (steerTarget - steerSmooth) * 0.1; // Smooth interpolation
+    steerSmooth += (steerTarget - steerSmooth) * 0.1;
 
-    // Apply Steering based on speed and aerodynamic grip
     if (Math.abs(speed) > 0.02) {
         const dir = speed > 0 ? 1 : -1;
         carAngle += steerSmooth * gripFactor * dir * (speed / maxSpeed);
@@ -353,8 +452,8 @@ function updatePhysics() {
     const closestPoint = trackCurve.getPointAt((getTrackProgress(carPos) % 1));
     const distToCenter = carPos.distanceTo(closestPoint);
     
-    if (distToCenter > 18) {
-        speed *= 0.88; // Off-track grass penalty
+    if (distToCenter > ROAD_WIDTH / 2 + 1) {
+        speed *= 0.88; // Grass Friction Penalty
     }
 
     // Movement Translation
@@ -362,13 +461,13 @@ function updatePhysics() {
     carGroup.position.z += Math.cos(carAngle) * speed;
     carGroup.rotation.y = carAngle;
 
-    // Front Wheel Steering Animation
+    // Front Wheels Animation
     wheels[0].rotation.y = steerSmooth * 0.4;
     wheels[1].rotation.y = steerSmooth * 0.4;
     wheels.forEach(w => w.rotation.x += speed * 0.4);
 
-    // 3rd Person Smooth Follow Camera
-    const camOffset = new THREE.Vector3(0, 5.5, -14).applyAxisAngle(new THREE.Vector3(0, 1, 0), carAngle);
+    // 3rd Person Chase Camera
+    const camOffset = new THREE.Vector3(0, 6, -15).applyAxisAngle(new THREE.Vector3(0, 1, 0), carAngle);
     camera.position.lerp(carGroup.position.clone().add(camOffset), 0.2);
     camera.lookAt(carGroup.position.clone().add(new THREE.Vector3(0, 1.2, 0)));
 
@@ -377,8 +476,8 @@ function updatePhysics() {
         checkpointPassed = true;
     }
 
-    // Finish Line Crossing
-    if (checkpointPassed && Math.abs(carGroup.position.x) < 25 && carGroup.position.z > 215) {
+    // Crossing Finish Line
+    if (checkpointPassed && Math.abs(carGroup.position.x) < 20 && carGroup.position.z > 215) {
         const now = Date.now();
         const lapTime = (now - lapStartTime) / 1000;
         lapTimes.push(lapTime);
@@ -395,7 +494,7 @@ function updatePhysics() {
         }
     }
 
-    // HUD Updates (Scaled to realistic km/h)
+    // HUD Update
     document.getElementById('speedVal').innerText = Math.round(Math.abs(speed) * 270);
     if (!isFinished) {
         const currentLapTimer = ((Date.now() - lapStartTime) / 1000).toFixed(2);
