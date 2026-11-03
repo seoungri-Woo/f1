@@ -2,25 +2,22 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="F1 Championship & Aerodynamics Simulator",
+    page_title="F1 3D Championship Simulator",
     page_icon="🏎️",
     layout="wide"
 )
 
-st.title("🏎️ F1 챔피언십: 리얼 서킷 & 타이어 피트인 시뮬레이터")
+st.title("🏎️ F1 3D 3인칭 레이싱 & 에어로다이나믹스 시뮬레이터")
 st.markdown("""
 **[게임 조작 및 튜닝 전략]**
-- **방향키 (↑ / ↓ / ← / →) 또는 WASD:** 가속 / 브레이크 / **부드러운 조향**
+- **방향키 (↑ / ↓ / ← / →) 또는 WASD:** 가속 / 브레이크 / **부드러운 조향 (3D 3인칭 시점)**
 - **스페이스바 (Space):** 리어 윙 4단계 전환 (**0° ➔ 15° ➔ 30° ➔ 40°**)
-- **피트인 (Pit Stop):** 타이어 마모 시 **피트 레이인(주황색 피트 박스)**으로 진입하면 3초 간 정지 후 타이어 교체!
-- **타이어 전략:**
-  - 🔴 **Soft:** 압도적 속도 & 접지력, 빠른 마모
-  - 🟡 **Medium:** 균형 잡힌 주행 성능
-  - ⚪ **Hard:** 느린 속도, 뛰어난 내구성
+- **피트인 (Pit Stop):** 타이어 마모 시 **피트 박스(주황색 구역)**로 진입하면 3초간 정지 후 타이어 교체!
+- **타이어 전략:** 🔴 **Soft** (고속·빠른 마모) / 🟡 **Medium** (표준) / ⚪ **Hard** (저속·고내구)
 """)
 
-# HTML5 Canvas 기반 F1 챔피언십 엔진 (AI 경쟁, 타이어 마모, 피트스탑 포함)
-game_html = """
+# HTML5 + Three.js Real 3D F1 Engine
+game_3d_html = """
 <!DOCTYPE html>
 <html>
 <head>
@@ -29,43 +26,36 @@ game_html = """
         body {
             margin: 0;
             padding: 0;
-            background-color: #0b0f19;
-            color: white;
+            overflow: hidden;
+            background-color: #050505;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             user-select: none;
         }
-        #gameContainer {
+        #canvas-container {
+            width: 100vw;
+            height: 620px;
             position: relative;
-            margin-top: 5px;
-        }
-        canvas {
-            border: 3px solid #1e293b;
-            border-radius: 12px;
-            background-color: #0f172a;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
         }
         
-        /* F1 Telemetry HUD Overlay */
+        /* Glassmorphism HUD Overlay */
         .hud-panel {
             position: absolute;
             top: 15px;
             left: 20px;
             display: flex;
             gap: 12px;
-            background: rgba(15, 23, 42, 0.88);
-            backdrop-filter: blur(8px);
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(10px);
             padding: 10px 18px;
-            border-radius: 10px;
+            border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-            z-index: 5;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            z-index: 10;
         }
         .hud-item {
             font-size: 13px;
             font-weight: 600;
+            color: white;
         }
         .hud-value {
             color: #ffcc00;
@@ -84,7 +74,7 @@ game_html = """
         .badge-medium { background: #eab308; color: black; }
         .badge-hard { background: #94a3b8; color: black; }
 
-        /* Start Setup Overlay */
+        /* Start Setup Modal */
         #startModal {
             position: absolute;
             top: 50%;
@@ -98,6 +88,7 @@ game_html = """
             width: 380px;
             box-shadow: 0 0 50px rgba(255, 204, 0, 0.4);
             z-index: 50;
+            color: white;
         }
         #startModal h2 { color: #ffcc00; margin-top: 0; }
         .setting-group {
@@ -136,7 +127,7 @@ game_html = """
         }
         .btn-start:hover { transform: scale(1.03); background: #ffd633; }
 
-        /* Pit Stop Overlay */
+        /* Pit Stop Interactive Modal */
         #pitModal {
             display: none;
             position: absolute;
@@ -149,8 +140,9 @@ game_html = """
             border-radius: 14px;
             text-align: center;
             z-index: 60;
+            color: white;
         }
-        #pitModal h3 { margin: 0 0 10px 0; color: white; }
+        #pitModal h3 { margin: 0 0 10px 0; }
         .btn-compound {
             padding: 8px 15px;
             margin: 4px;
@@ -160,7 +152,7 @@ game_html = """
             cursor: pointer;
         }
 
-        /* Finish Summary Modal */
+        /* Summary Result Modal */
         #summaryModal {
             display: none;
             position: absolute;
@@ -175,6 +167,7 @@ game_html = """
             width: 360px;
             box-shadow: 0 0 50px rgba(255, 204, 0, 0.5);
             z-index: 100;
+            color: white;
         }
         #summaryModal h2 { color: #ffcc00; margin-top: 0; }
         .stat-box {
@@ -198,10 +191,12 @@ game_html = """
             width: 100%;
         }
     </style>
+    <!-- Three.js 3D Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div id="gameContainer">
+    <div id="canvas-container">
         <!-- Telemetry HUD -->
         <div class="hud-panel">
             <div class="hud-item">🏎️ 순위: <span id="posVal" class="hud-value" style="color:#38bdf8;">1st / 4</span></div>
@@ -212,11 +207,9 @@ game_html = """
             <div class="hud-item">⏱️ 타임: <span id="timeVal" class="hud-value">0.00s</span></div>
         </div>
 
-        <canvas id="raceCanvas" width="880" height="560"></canvas>
-        
-        <!-- Game Setup Modal -->
+        <!-- Setup Game Modal -->
         <div id="startModal">
-            <h2>🏆 F1 챔피언십 설정</h2>
+            <h2>🏆 3D F1 챔피언십 설정</h2>
             <div class="setting-group">
                 <label>🚩 레이스 랩 수 선택</label>
                 <select id="selectLaps">
@@ -234,7 +227,7 @@ game_html = """
                     <option value="HARD">⚪ Hard (느린 속도, 강한 내구성)</option>
                 </select>
             </div>
-            <button class="btn-start" onclick="initGame()">레이스 스타트!</button>
+            <button class="btn-start" onclick="initGame()">3D 레이스 스타트!</button>
         </div>
 
         <!-- Pit Stop Interactive Modal -->
@@ -258,75 +251,264 @@ game_html = """
     </div>
 
 <script>
-const canvas = document.getElementById('raceCanvas');
-const ctx = canvas.getContext('2d');
+// --- Three.js Setup ---
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x6ca6cd); // Sky atmosphere
+scene.fog = new THREE.FogExp2(0x6ca6cd, 0.0015);
 
-// --- Aerodynamics Tuning Presets ---
+const camera = new THREE.PerspectiveCamera(55, container.clientWidth / 620, 0.1, 1500);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(container.clientWidth, 620);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
+
+// --- Lighting ---
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+dirLight.position.set(200, 300, 150);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.width = 2048;
+dirLight.shadow.mapSize.height = 2048;
+dirLight.shadow.camera.near = 10;
+dirLight.shadow.camera.far = 800;
+dirLight.shadow.camera.left = -300;
+dirLight.shadow.camera.right = 300;
+dirLight.shadow.camera.top = 300;
+dirLight.shadow.camera.bottom = -300;
+scene.add(dirLight);
+
+// Grass Ground
+const grassGeo = new THREE.PlaneGeometry(2500, 2500);
+const grassMat = new THREE.MeshLambertMaterial({ color: 0x225522 });
+const grass = new THREE.Mesh(grassGeo, grassMat);
+grass.rotation.x = -Math.PI / 2;
+grass.position.y = -0.05;
+grass.receiveShadow = true;
+scene.add(grass);
+
+// --- 3D Real F1 Track Waypoints & Ribbon Generator ---
+const trackPoints = [
+    new THREE.Vector3(0, 0, 220),       // Main Straight
+    new THREE.Vector3(260, 0, 220),     // Turn 1
+    new THREE.Vector3(340, 0, 140),     // Chicane
+    new THREE.Vector3(300, 0, 30),      
+    new THREE.Vector3(360, 0, -80),     // Hairpin
+    new THREE.Vector3(250, 0, -220),    
+    new THREE.Vector3(80, 0, -240),     // Back Straight
+    new THREE.Vector3(-120, 0, -240),   // High Speed Sweeper
+    new THREE.Vector3(-280, 0, -120),   // S-Curve
+    new THREE.Vector3(-220, 0, 20),     
+    new THREE.Vector3(-300, 0, 120),    // Parabolica
+    new THREE.Vector3(-200, 0, 220)     // Final Corner to Main Straight
+];
+
+const trackCurve = new THREE.CatmullRomCurve3(trackPoints, true, 'catmullrom', 0.25);
+const SEGMENTS = 350;
+const ROAD_WIDTH = 32; // Thick 3D Asphalt Width
+
+function build3DTrack() {
+    const points = trackCurve.getSpacedPoints(SEGMENTS);
+    const roadVertices = [], roadIndices = [];
+    const kerbVertices = [], kerbColors = [], kerbIndices = [];
+
+    for (let i = 0; i <= SEGMENTS; i++) {
+        const p1 = points[i % SEGMENTS];
+        const p2 = points[(i + 1) % SEGMENTS];
+
+        const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
+        const norm = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+
+        const lRoad = new THREE.Vector3().addVectors(p1, norm.clone().multiplyScalar(ROAD_WIDTH / 2));
+        const rRoad = new THREE.Vector3().addVectors(p1, norm.clone().multiplyScalar(-ROAD_WIDTH / 2));
+
+        roadVertices.push(lRoad.x, 0.01, lRoad.z);
+        roadVertices.push(rRoad.x, 0.01, rRoad.z);
+
+        if (i < SEGMENTS) {
+            const r1 = i * 2, r2 = (i + 1) * 2;
+            roadIndices.push(r1, r1 + 1, r2);
+            roadIndices.push(r1 + 1, r2 + 1, r2);
+        }
+
+        // Red/White Kerbs
+        const lKerbOuter = new THREE.Vector3().addVectors(p1, norm.clone().multiplyScalar(ROAD_WIDTH / 2 + 3.0));
+        const rKerbOuter = new THREE.Vector3().addVectors(p1, norm.clone().multiplyScalar(-ROAD_WIDTH / 2 - 3.0));
+        const color = (Math.floor(i / 2) % 2 === 0) ? [0.9, 0.1, 0.1] : [0.95, 0.95, 0.95];
+
+        kerbVertices.push(lRoad.x, 0.02, lRoad.z, lKerbOuter.x, 0.02, lKerbOuter.z);
+        kerbColors.push(...color, ...color);
+
+        kerbVertices.push(rRoad.x, 0.02, rRoad.z, rKerbOuter.x, 0.02, rKerbOuter.z);
+        kerbColors.push(...color, ...color);
+
+        if (i < SEGMENTS) {
+            const k1 = i * 4, k2 = (i + 1) * 4;
+            kerbIndices.push(k1, k1 + 1, k2, k1 + 1, k2 + 1, k2);
+            kerbIndices.push(k1 + 2, k1 + 3, k2 + 2, k1 + 3, k2 + 3, k2 + 2);
+        }
+    }
+
+    // Asphalt Mesh
+    const roadGeo = new THREE.BufferGeometry();
+    roadGeo.setAttribute('position', new THREE.Float32BufferAttribute(roadVertices, 3));
+    roadGeo.setIndex(roadIndices);
+    roadGeo.computeVertexNormals();
+
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x222226, roughness: 0.85 });
+    const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+    roadMesh.receiveShadow = true;
+    scene.add(roadMesh);
+
+    // Kerbs Mesh
+    const kerbGeo = new THREE.BufferGeometry();
+    kerbGeo.setAttribute('position', new THREE.Float32BufferAttribute(kerbVertices, 3));
+    kerbGeo.setAttribute('color', new THREE.Float32BufferAttribute(kerbColors, 3));
+    kerbGeo.setIndex(kerbIndices);
+    
+    const kerbMesh = new THREE.Mesh(kerbGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+    scene.add(kerbMesh);
+}
+build3DTrack();
+
+// Pit Lane Surface (Orange Box)
+const pitBoxGeo = new THREE.PlaneGeometry(24, 15);
+const pitBoxMat = new THREE.MeshBasicMaterial({ color: 0xea580c, side: THREE.DoubleSide });
+const pitBoxMesh = new THREE.Mesh(pitBoxGeo, pitBoxMat);
+pitBoxMesh.rotation.x = -Math.PI / 2;
+pitBoxMesh.position.set(ROAD_WIDTH / 2 + 8, 0.03, 200);
+scene.add(pitBoxMesh);
+
+// Finish Arch Structure
+const gantryGroup = new THREE.Group();
+gantryGroup.position.set(0, 0, 220);
+const p1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 12, 1.5), new THREE.MeshStandardMaterial({ color: 0x444444 }));
+p1.position.set(-ROAD_WIDTH/2 - 3, 6, 0);
+const p2 = p1.clone();
+p2.position.set(ROAD_WIDTH/2 + 3, 6, 0);
+const topBeam = new THREE.Mesh(new THREE.BoxGeometry(ROAD_WIDTH + 8, 2, 2), new THREE.MeshStandardMaterial({ color: 0xe63946 }));
+topBeam.position.set(0, 11, 0);
+gantryGroup.add(p1, p2, topBeam);
+scene.add(gantryGroup);
+
+// --- Car Factory Mesh Helper ---
+function create3DCar(colorHex, rWingColorHex) {
+    const carGroup = new THREE.Group();
+
+    // Chassis Body
+    const body = new THREE.Mesh(
+        new THREE.BoxGeometry(2.4, 0.75, 5.4),
+        new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2, metalness: 0.6 })
+    );
+    body.position.y = 0.6;
+    body.castShadow = true;
+    carGroup.add(body);
+
+    // Cockpit
+    const cockpit = new THREE.Mesh(
+        new THREE.SphereGeometry(0.6, 16, 16),
+        new THREE.MeshStandardMaterial({ color: 0x111111 })
+    );
+    cockpit.position.set(0, 0.9, -0.2);
+    carGroup.add(cockpit);
+
+    // Front Wing
+    const fWing = new THREE.Mesh(
+        new THREE.BoxGeometry(3.8, 0.12, 1.0),
+        new THREE.MeshStandardMaterial({ color: 0x111111 })
+    );
+    fWing.position.set(0, 0.35, 2.7);
+    fWing.castShadow = true;
+    carGroup.add(fWing);
+
+    // Rear Wing
+    const rearWingGroup = new THREE.Group();
+    rearWingGroup.position.set(0, 1.2, -2.5);
+    const rWingMain = new THREE.Mesh(
+        new THREE.BoxGeometry(3.4, 0.2, 1.0),
+        new THREE.MeshStandardMaterial({ color: rWingColorHex })
+    );
+    rWingMain.castShadow = true;
+    rearWingGroup.add(rWingMain);
+
+    const rWingPillar1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.65, 0.12), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+    rWingPillar1.position.set(-1.0, -0.3, 0);
+    rearWingGroup.add(rWingPillar1);
+    const rWingPillar2 = rWingPillar1.clone();
+    rWingPillar2.position.set(1.0, -0.3, 0);
+    rearWingGroup.add(rWingPillar2);
+
+    carGroup.add(rearWingGroup);
+
+    // Wheels
+    const wheels = [];
+    const wheelPositions = [[-1.4, 0.6, 1.9], [1.4, 0.6, 1.9], [-1.4, 0.6, -1.9], [1.4, 0.6, -1.9]];
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0d0d0d, roughness: 0.9 });
+
+    wheelPositions.forEach(pos => {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.5, 16), wheelMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(...pos);
+        wheel.castShadow = true;
+        carGroup.add(wheel);
+        wheels.push(wheel);
+    });
+
+    return { group: carGroup, rearWingGroup, wheels, wheelMat };
+}
+
+// Player Car 3D Mesh
+const playerObj = create3DCar(0xe63946, 0xffcc00);
+scene.add(playerObj.group);
+playerObj.group.position.set(0, 0, 220);
+
+// AI Cars (3 Competitors)
+const aiCarData = [
+    { name: "Red Bull", color: 0x1e3a8a, rWing: 0xf59e0b, offset: -6, progress: 0.05, speed: 0.82 },
+    { name: "Mercedes", color: 0x64748b, rWing: 0x06b6d4, offset: 6, progress: 0.10, speed: 0.80 },
+    { name: "McLaren", color: 0xf97316, rWing: 0x111827, offset: -10, progress: 0.15, speed: 0.78 }
+];
+
+const aiCars = aiCarData.map(d => {
+    const obj = create3DCar(d.color, d.rWing);
+    scene.add(obj.group);
+    return { ...d, obj, lap: 0 };
+});
+
+// Aerodynamics & Tires State
 const wingPresetAngles = [0, 15, 30, 40];
 let wingPresetIndex = 1;
 let wingAngle = 15;
 
-// Tire Compounds Specs
 const TIRE_SPECS = {
-    'SOFT': { speedMult: 1.08, gripMult: 1.25, wearRate: 0.28, color: '#e63946', badgeClass: 'badge-soft' },
-    'MEDIUM': { speedMult: 1.00, gripMult: 1.00, wearRate: 0.14, color: '#eab308', badgeClass: 'badge-medium' },
-    'HARD': { speedMult: 0.94, gripMult: 0.82, wearRate: 0.06, color: '#94a3b8', badgeClass: 'badge-hard' }
+    'SOFT': { speedMult: 1.08, gripMult: 1.25, wearRate: 0.28, badgeClass: 'badge-soft', wheelColor: 0xe63946 },
+    'MEDIUM': { speedMult: 1.00, gripMult: 1.00, wearRate: 0.14, badgeClass: 'badge-medium', wheelColor: 0xeab308 },
+    'HARD': { speedMult: 0.94, gripMult: 0.82, wearRate: 0.06, badgeClass: 'badge-hard', wheelColor: 0x94a3b8 }
 };
 
 let currentTire = 'MEDIUM';
-let tireWear = 100.0; // 0~100%
-
+let tireWear = 100.0;
 let keys = {};
 
-// Player Car State
-let player = {
-    x: 440,
-    y: 495,
-    angle: 0,
-    speed: 0,
-    steerAngle: 0,
-    lapsCompleted: 0,
-    progress: 0,
-    inPit: false,
-    pitTimer: 0
-};
+// Player Physics
+let speed = 0;
+let carAngle = -Math.PI / 2;
+let steerSmooth = 0;
+let inPit = false;
 
-// 3 AI Competitors Setup
-let aiCars = [
-    { id: 1, name: "Red Bull", color: "#1e3a8a", wingColor: "#f59e0b", x: 440, y: 460, angle: 0, speed: 0, progress: 0, lap: 0, targetIndex: 0, baseSpeed: 7.2 },
-    { id: 2, name: "Mercedes", color: "#64748b", wingColor: "#06b6d4", x: 400, y: 460, angle: 0, speed: 0, progress: 0, lap: 0, targetIndex: 0, baseSpeed: 7.0 },
-    { id: 3, name: "McLaren", color: "#f97316", wingColor: "#111827", x: 400, y: 495, angle: 0, speed: 0, progress: 0, lap: 0, targetIndex: 0, baseSpeed: 6.8 }
-];
-
-// Detailed Circuit Waypoint Way
-const outerTrack = [
-    {x: 100, y: 460}, {x: 440, y: 460}, {x: 760, y: 460}, {x: 820, y: 390},
-    {x: 820, y: 170}, {x: 710, y: 70},  {x: 520, y: 70},  {x: 440, y: 150},
-    {x: 360, y: 70},  {x: 160, y: 70},  {x: 60, y: 170},  {x: 60, y: 390}
-];
-
-const innerTrack = [
-    {x: 140, y: 390}, {x: 440, y: 390}, {x: 720, y: 390}, {x: 750, y: 340},
-    {x: 750, y: 200}, {x: 670, y: 130}, {x: 520, y: 130}, {x: 440, y: 210},
-    {x: 360, y: 130}, {x: 180, y: 130}, {x: 120, y: 200}, {x: 120, y: 340}
-];
-
-// Race Waypoints for AI Pathfinding
-const aiWaypoints = [
-    {x: 440, y: 480}, {x: 740, y: 480}, {x: 790, y: 430}, {x: 790, y: 200},
-    {x: 690, y: 100}, {x: 520, y: 100}, {x: 440, y: 180}, {x: 360, y: 100},
-    {x: 170, y: 100}, {x: 90, y: 200},  {x: 90, y: 410},  {x: 150, y: 480}
-];
-
-// Race Timing & State
+// Race Game State
 let maxLaps = 5;
+let playerLap = 0;
 let lapStartTime = Date.now();
 let lapTimes = [];
 let checkpointPassed = false;
 let isGameStarted = false;
 let isFinished = false;
 
-// Event Listeners
+// Key Handlers
 window.addEventListener('keydown', e => {
     if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","KeyW","KeyS","KeyA","KeyD"].includes(e.code)) {
         e.preventDefault();
@@ -334,6 +516,7 @@ window.addEventListener('keydown', e => {
     if (e.code === 'Space' && !e.repeat && isGameStarted && !isFinished) {
         wingPresetIndex = (wingPresetIndex + 1) % wingPresetAngles.length;
         wingAngle = wingPresetAngles[wingPresetIndex];
+        playerObj.rearWingGroup.rotation.x = (wingAngle * Math.PI) / 180;
         document.getElementById('wingBadge').innerText = wingAngle + '°';
     }
     keys[e.code] = true;
@@ -357,171 +540,140 @@ function updateTireUI() {
     const badge = document.getElementById('tireBadge');
     badge.innerText = currentTire;
     badge.className = `badge ${spec.badgeClass}`;
-}
-
-function isPointInPoly(poly, pt) {
-    let c = false;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-        if (((poly[i].y > pt.y) !== (poly[j].y > pt.y)) &&
-            (pt.x < (poly[j].x - poly[i].x) * (pt.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)) {
-            c = !c;
-        }
-    }
-    return c;
-}
-
-function checkOnTrack(x, y) {
-    const inOuter = isPointInPoly(outerTrack, {x, y});
-    const inInner = isPointInPoly(innerTrack, {x, y});
-    return inOuter && !inInner;
+    playerObj.wheelMat.color.setHex(spec.wheelColor);
 }
 
 function updatePhysics() {
     if (!isGameStarted || isFinished) return;
 
-    // Pit Stop Frozen Logic
-    if (player.inPit) {
-        player.speed *= 0.8;
+    if (inPit) {
+        speed *= 0.8;
         return;
     }
 
     const spec = TIRE_SPECS[currentTire];
-    
-    // Tire wear penalty (Below 30% wear degrades performance)
     const wearGripPenalty = tireWear < 30 ? (tireWear / 30) : 1.0;
-    
-    // Aerodynamics + Tire Trade-Off
-    const baseMaxSpeed = (9.4 - (wingAngle / 40) * 3.2) * spec.speedMult * wearGripPenalty;
-    const gripFactor = (0.022 + (wingAngle / 40) * 0.028) * spec.gripMult * wearGripPenalty;
 
-    // Throttle & Braking Controls
-    if (keys['ArrowUp'] || keys['KeyW']) {
-        player.speed += 0.12;
-    } else if (keys['ArrowDown'] || keys['KeyS']) {
-        player.speed -= 0.18;
-    } else {
-        player.speed *= 0.985;
+    const maxSpeed = (0.98 - (wingAngle / 40) * 0.48) * spec.speedMult * wearGripPenalty;
+    const gripFactor = (0.009 + (wingAngle / 40) * 0.017) * spec.gripMult * wearGripPenalty;
+
+    // Controls
+    if (keys['ArrowUp'] || keys['KeyW']) speed += 0.008;
+    else if (keys['ArrowDown'] || keys['KeyS']) speed -= 0.012;
+    else speed *= 0.985;
+
+    if (speed > maxSpeed) speed = maxSpeed;
+    if (speed < -maxSpeed * 0.3) speed = -maxSpeed * 0.3;
+
+    // Smooth Steering
+    const steerTarget = (keys['ArrowLeft'] || keys['KeyA']) ? 1 : ((keys['ArrowRight'] || keys['KeyD']) ? -1 : 0);
+    steerSmooth += (steerTarget - steerSmooth) * 0.1;
+
+    if (Math.abs(speed) > 0.02) {
+        const dir = speed > 0 ? 1 : -1;
+        carAngle += steerSmooth * gripFactor * dir * (speed / maxSpeed);
     }
 
-    // Speed Limits
-    if (player.speed > baseMaxSpeed) player.speed = baseMaxSpeed;
-    if (player.speed < -baseMaxSpeed * 0.3) player.speed = -baseMaxSpeed * 0.3;
-
-    // Steering Smooth Inertia
-    const steerTarget = (keys['ArrowLeft'] || keys['KeyA']) ? -1 : ((keys['ArrowRight'] || keys['KeyD']) ? 1 : 0);
-    player.steerAngle += (steerTarget - player.steerAngle) * 0.15;
-
-    if (Math.abs(player.speed) > 0.2) {
-        const dir = player.speed > 0 ? 1 : -1;
-        player.angle += player.steerAngle * gripFactor * dir;
-    }
-
-    // Tire Wear Reduction calculation
-    if (Math.abs(player.speed) > 0.5) {
-        tireWear -= spec.wearRate * (1 + Math.abs(player.steerAngle) * 0.5) * 0.1;
+    if (Math.abs(speed) > 0.05) {
+        tireWear -= spec.wearRate * (1 + Math.abs(steerSmooth) * 0.5) * 0.05;
         if (tireWear < 0) tireWear = 0;
     }
 
-    // Off-Track Grass Drag Penalty
-    const onTrack = checkOnTrack(player.x, player.y);
-    if (!onTrack) {
-        player.speed *= 0.88;
+    // Off-track Grass Penalty
+    const carPos = playerObj.group.position;
+    const currentProgress = getTrackProgress(carPos);
+    const closestPoint = trackCurve.getPointAt(currentProgress % 1);
+    if (carPos.distanceTo(closestPoint) > ROAD_WIDTH / 2 + 1) {
+        speed *= 0.88;
     }
 
-    // Movement Translation
-    player.x += Math.cos(player.angle) * player.speed;
-    player.y += Math.sin(player.angle) * player.speed;
+    // Move Player 3D Mesh
+    carPos.x += Math.sin(carAngle) * speed;
+    carPos.z += Math.cos(carAngle) * speed;
+    playerObj.group.rotation.y = carAngle;
 
-    // Check Pit Stop Area Entrance (Pit Lane Box: x ~ 400-500, y ~ 500-530)
-    if (player.x > 380 && player.x < 480 && player.y > 500 && player.y < 535 && !player.inPit) {
-        player.inPit = true;
+    playerObj.wheels[0].rotation.y = steerSmooth * 0.4;
+    playerObj.wheels[1].rotation.y = steerSmooth * 0.4;
+    playerObj.wheels.forEach(w => w.rotation.x += speed * 0.4);
+
+    // 3rd Person Chase Camera
+    const camOffset = new THREE.Vector3(0, 5.5, -14).applyAxisAngle(new THREE.Vector3(0, 1, 0), carAngle);
+    camera.position.lerp(carPos.clone().add(camOffset), 0.2);
+    camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1.2, 0)));
+
+    // Pit Stop Check
+    if (carPos.x > ROAD_WIDTH / 2 && carPos.x < ROAD_WIDTH / 2 + 18 && carPos.z > 185 && carPos.z < 215 && !inPit) {
+        inPit = true;
         document.getElementById('pitModal').style.display = 'block';
     }
 
-    // Checkpoint & Lap Logic
-    if (player.y < 150 && player.x > 380 && player.x < 520) {
-        checkpointPassed = true;
-    }
+    // Checkpoint & Finish Line
+    if (carPos.z < -180) checkpointPassed = true;
 
-    // Crossing Finish Line (x ~ 440, y ~ 460~530)
-    if (checkpointPassed && player.x > 430 && player.x < 450 && player.y > 450 && player.y < 535) {
+    if (checkpointPassed && Math.abs(carPos.x) < 20 && carPos.z > 215) {
         const now = Date.now();
         const lapTime = (now - lapStartTime) / 1000;
         lapTimes.push(lapTime);
-        
+
         checkpointPassed = false;
         lapStartTime = now;
-        player.lapsCompleted++;
+        playerLap++;
 
-        if (player.lapsCompleted < maxLaps) {
-            document.getElementById('lapVal').innerText = `${player.lapsCompleted + 1} / ${maxLaps}`;
+        if (playerLap < maxLaps) {
+            document.getElementById('lapVal').innerText = `${playerLap + 1} / ${maxLaps}`;
         } else {
             isFinished = true;
             showSummaryModal();
         }
     }
 
-    // --- AI Competitors Movement Logic ---
+    // Update AI 3D Cars Position
     aiCars.forEach(ai => {
-        const target = aiWaypoints[ai.targetIndex];
-        const dx = target.x - ai.x;
-        const dy = target.y - ai.y;
-        const targetAngle = Math.atan2(dy, dx);
+        ai.progress = (ai.progress + ai.speed * 0.0004) % 1;
+        const pt = trackCurve.getPointAt(ai.progress);
+        const nextPt = trackCurve.getPointAt((ai.progress + 0.005) % 1);
         
-        // AI Steering toward waypoint
-        let angleDiff = targetAngle - ai.angle;
-        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        const dir = new THREE.Vector3().subVectors(nextPt, pt).normalize();
+        const norm = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
         
-        ai.angle += angleDiff * 0.1;
-        ai.speed = ai.baseSpeed;
-        
-        ai.x += Math.cos(ai.angle) * ai.speed;
-        ai.y += Math.sin(ai.angle) * ai.speed;
-
-        const dist = Math.hypot(dx, dy);
-        if (dist < 40) {
-            ai.targetIndex = (ai.targetIndex + 1) % aiWaypoints.length;
-            if (ai.targetIndex === 0) ai.lap++;
-        }
+        const aiPos = pt.clone().add(norm.multiplyScalar(ai.offset));
+        ai.obj.group.position.copy(aiPos);
+        ai.obj.group.rotation.y = Math.atan2(dir.x, dir.z);
     });
 
-    // Rank Calculation (Standings)
-    calculateStandings();
+    calculateStandings(currentProgress);
 
-    // Telemetry UI Updates
-    document.getElementById('speedVal').innerText = Math.round(Math.abs(player.speed) * 35);
+    // Update HUD
+    document.getElementById('speedVal').innerText = Math.round(Math.abs(speed) * 270);
     document.getElementById('wearVal').innerText = `${Math.round(tireWear)}%`;
     if (!isFinished) {
-        const currentLapTimer = ((Date.now() - lapStartTime) / 1000).toFixed(2);
-        document.getElementById('timeVal').innerText = `${currentLapTimer}s`;
+        document.getElementById('timeVal').innerText = `${((Date.now() - lapStartTime) / 1000).toFixed(2)}s`;
     }
 }
 
-function calculateStandings() {
-    const allCars = [
-        { name: "Player", lap: player.lapsCompleted, progress: getTrackProgress(player), isPlayer: true },
-        ...aiCars.map(ai => ({ name: ai.name, lap: ai.lap, progress: ai.targetIndex, isPlayer: false }))
+function calculateStandings(playerProgress) {
+    const standings = [
+        { name: "Player", score: playerLap + playerProgress, isPlayer: true },
+        ...aiCars.map(ai => ({ name: ai.name, score: ai.lap + ai.progress, isPlayer: false }))
     ];
+    standings.sort((a, b) => b.score - a.score);
 
-    allCars.sort((a, b) => (b.lap * 100 + b.progress) - (a.lap * 100 + a.progress));
-    
-    const rank = allCars.findIndex(c => c.isPlayer) + 1;
-    const rankSuffix = rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th';
-    document.getElementById('posVal').innerText = `${rank}${rankSuffix} / 4`;
+    const rank = standings.findIndex(s => s.isPlayer) + 1;
+    const suffix = rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th';
+    document.getElementById('posVal').innerText = `${rank}${suffix} / 4`;
 }
 
-function getTrackProgress(pt) {
-    let minDist = Infinity;
-    let closestIdx = 0;
-    aiWaypoints.forEach((wp, idx) => {
-        const d = Math.hypot(wp.x - pt.x, wp.y - pt.y);
+function getTrackProgress(pos) {
+    let minDist = Infinity, closestT = 0;
+    for (let t = 0; t <= 1; t += 0.01) {
+        const pt = trackCurve.getPointAt(t);
+        const d = pt.distanceTo(pos);
         if (d < minDist) {
             minDist = d;
-            closestIdx = idx;
+            closestT = t;
         }
-    });
-    return closestIdx;
+    }
+    return closestT;
 }
 
 function changeTire(newCompound) {
@@ -530,126 +682,9 @@ function changeTire(newCompound) {
     updateTireUI();
 
     setTimeout(() => {
-        player.inPit = false;
+        inPit = false;
         document.getElementById('pitModal').style.display = 'none';
-    }, 1500); // 1.5sec Pit stop delay
-}
-
-function drawTrack() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 1. Gravel Runoff Areas (Sand Traps)
-    ctx.fillStyle = '#c29b62';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // 2. Red/White Kerb Border Line
-    ctx.beginPath();
-    ctx.moveTo(outerTrack[0].x, outerTrack[0].y);
-    for (let i = 1; i < outerTrack.length; i++) ctx.lineTo(outerTrack[i].x, outerTrack[i].y);
-    ctx.closePath();
-    ctx.fillStyle = '#dc2626';
-    ctx.fill();
-
-    // 3. Dark Asphalt Track Surface
-    ctx.beginPath();
-    ctx.moveTo(outerTrack[0].x, outerTrack[0].y);
-    for (let i = 1; i < outerTrack.length; i++) ctx.lineTo(outerTrack[i].x, outerTrack[i].y);
-    ctx.closePath();
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = '#ffffff';
-    ctx.stroke();
-
-    ctx.fillStyle = '#1e293b';
-    ctx.fill();
-
-    // 4. Inner Grass Island
-    ctx.beginPath();
-    ctx.moveTo(innerTrack[0].x, innerTrack[0].y);
-    for (let i = 1; i < innerTrack.length; i++) ctx.lineTo(innerTrack[i].x, innerTrack[i].y);
-    ctx.closePath();
-    ctx.fillStyle = '#15803d';
-    ctx.fill();
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = '#dc2626';
-    ctx.stroke();
-
-    // 5. Pit Lane & Pit Box Surface (Orange Line)
-    ctx.fillStyle = '#ea580c';
-    ctx.fillRect(380, 505, 100, 30);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 12px sans-serif';
-    ctx.fillText('PIT BOX', 405, 525);
-
-    // 6. Start/Finish Line Stripe
-    ctx.save();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 8;
-    ctx.setLineDash([10, 10]);
-    ctx.beginPath();
-    ctx.moveTo(440, 390);
-    ctx.lineTo(440, 460);
-    ctx.stroke();
-    ctx.restore();
-}
-
-function drawCars() {
-    // Draw AI Competitors
-    aiCars.forEach(ai => {
-        ctx.save();
-        ctx.translate(ai.x, ai.y);
-        ctx.rotate(ai.angle);
-
-        ctx.fillStyle = ai.color;
-        ctx.fillRect(-13, -6, 26, 12);
-
-        // AI Rear Wing
-        ctx.fillStyle = ai.wingColor;
-        ctx.fillRect(-15, -7, 4, 14);
-
-        // Wheels
-        ctx.fillStyle = '#000';
-        ctx.fillRect(4, -8, 6, 3);
-        ctx.fillRect(4, 5, 6, 3);
-        ctx.fillRect(-10, -8, 6, 3);
-        ctx.fillRect(-10, 5, 6, 3);
-
-        ctx.restore();
-    });
-
-    // Draw Player Car
-    ctx.save();
-    ctx.translate(player.x, player.y);
-    ctx.rotate(player.angle);
-
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(-15, -9, 32, 18);
-
-    // Player F1 Chassis (Red Bull Red)
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(-14, -6, 28, 12);
-
-    // Cockpit
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(-2, -4, 10, 8);
-
-    // Front Wing
-    ctx.fillStyle = '#111';
-    ctx.fillRect(12, -9, 4, 18);
-
-    // Adjustable Rear Wing
-    const wingWidth = 3 + (wingAngle / 40) * 5;
-    ctx.fillStyle = '#f59e0b';
-    ctx.fillRect(-16, -8, wingWidth, 16);
-
-    // Wheels (Color matches Tire Compound)
-    ctx.fillStyle = TIRE_SPECS[currentTire].color;
-    ctx.fillRect(4, -9, 7, 3);
-    ctx.fillRect(4, 6, 7, 3);
-    ctx.fillRect(-11, -9, 7, 3);
-    ctx.fillRect(-11, 6, 7, 3);
-
-    ctx.restore();
+    }, 1500);
 }
 
 function showSummaryModal() {
@@ -669,20 +704,16 @@ function showSummaryModal() {
     document.getElementById('summaryModal').style.display = 'block';
 }
 
-function gameLoop() {
+function animate() {
+    requestAnimationFrame(animate);
     updatePhysics();
-    drawTrack();
-    drawCars();
-    requestAnimationFrame(gameLoop);
+    renderer.render(scene, camera);
 }
-
-// Start Engine Loop
-gameLoop();
+animate();
 
 </script>
 </body>
 </html>
 """
 
-# Streamlit Component Render
-components.html(game_html, height=620)
+components.html(game_3d_html, height=640)
