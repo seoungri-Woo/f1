@@ -2,21 +2,20 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="F1 3D Grand Prix Simulator",
+    page_title="F1 3D Championship - Real Pit Stop",
     page_icon="🏎️",
     layout="wide"
 )
 
-st.title("🏎️ F1 3D 그랑프리: 스타트 신호등 & 3D 피트 가레지 시뮬레이터")
+st.title("🏎️ REAL F1 3D 그랑프리: 3D 피트 크루 타이어 교체 시뮬레이터")
 st.markdown("""
-**[게임 조작 및 튜닝 전략]**
-- **🚦 스타트 카운트다운:** 5개의 빨간 불이 들어온 뒤 **신호등이 꺼지면(LIGHTS OUT!) 초록불**과 함께 가속이 시작됩니다.
-- **방향키 (↑ / ↓ / ← / →) 또는 WASD:** 가속 / 브레이크 / **부드러운 3D 조향**
-- **스페이스바 (Space):** 리어 윙 4단계 전환 (**0° ➔ 15° ➔ 30° ➔ 40°**)
-- **피트인 (Pit Stop):** 타이어 마모 시 **오른쪽 피트 레이인(가레지 구역)**으로 진입하면 3D 피트 크루 타이어 교체 시작!
+**[피트스탑 이용 안내]**
+- 🚨 **트랙 오발동 방지:** 메인 트랙을 달릴 때는 피트스탑이 뜨지 않습니다. 타이어 교체가 필요하면 **오른쪽 피트 차선(Pit Lane)**으로 직접 핸들을 꺾어 들어가세요!
+- 🛞 **3D 피트 크루 타이어 교체:** 피트 박스 정지 후 `SOFT` / `MEDIUM` / `HARD`를 누르면 **4명의 3D 피트 크루원들이 달려와 직접 바퀴를 갈아줍니다.**
+- 🚦 **스타트 신호등:** 5개의 빨간 불이 켜진 후 일제히 꺼지는 **LIGHTS OUT** 순간에 출발하세요.
 """)
 
-# HTML5 + Three.js Real 3D F1 Engine
+# HTML5 + Three.js Real 3D F1 Engine with Animated Pit Crew
 game_3d_html = """
 <!DOCTYPE html>
 <html>
@@ -81,7 +80,7 @@ game_3d_html = """
             top: 70px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(10, 10, 10, 0.9);
+            background: rgba(10, 10, 10, 0.92);
             border: 3px solid #333;
             padding: 12px 25px;
             border-radius: 15px;
@@ -102,7 +101,6 @@ game_3d_html = """
             border-radius: 50%;
             background-color: #333;
             border: 2px solid #111;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
         }
         .light-red {
             background-color: #ff0000 !important;
@@ -180,7 +178,8 @@ game_3d_html = """
             text-align: center;
             z-index: 60;
             color: white;
-            box-shadow: 0 0 40px rgba(234, 88, 12, 0.5);
+            min-width: 340px;
+            box-shadow: 0 0 40px rgba(234, 88, 12, 0.6);
         }
         #pitModal h3 { margin: 0 0 10px 0; color: #ea580c; }
         .btn-compound {
@@ -193,7 +192,17 @@ game_3d_html = """
             cursor: pointer;
             transition: transform 0.15s;
         }
-        .btn-compound:hover { transform: scale(1.05); }
+        .btn-compound:hover { transform: scale(1.08); }
+
+        #pitStatus {
+            display: none;
+            color: #ffcc00;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 10px;
+            animation: blink 0.8s infinite alternate;
+        }
+        @keyframes blink { 0% { opacity: 0.4; } 100% { opacity: 1; } }
 
         /* Summary Result Modal */
         #summaryModal {
@@ -289,10 +298,16 @@ game_3d_html = """
         <!-- Pit Stop Interactive Modal -->
         <div id="pitModal">
             <h3>⛽ F1 PIT STOP! 타이어 교체</h3>
-            <p style="font-size:13px; margin-bottom:12px;">피트 크루 대기 중! 새 타이어를 선택하세요:</p>
-            <button class="btn-compound" style="background:#e63946; color:white;" onclick="changeTire('SOFT')">🔴 SOFT</button>
-            <button class="btn-compound" style="background:#eab308; color:black;" onclick="changeTire('MEDIUM')">🟡 MEDIUM</button>
-            <button class="btn-compound" style="background:#94a3b8; color:black;" onclick="changeTire('HARD')">⚪ HARD</button>
+            <div id="pitButtons">
+                <p style="font-size:13px; margin-bottom:12px;">교체할 타이어 컴파운드를 선택하세요:</p>
+                <button class="btn-compound" style="background:#e63946; color:white;" onclick="changeTire('SOFT')">🔴 SOFT</button>
+                <button class="btn-compound" style="background:#eab308; color:black;" onclick="changeTire('MEDIUM')">🟡 MEDIUM</button>
+                <button class="btn-compound" style="background:#94a3b8; color:black;" onclick="changeTire('HARD')">⚪ HARD</button>
+            </div>
+            <div id="pitStatus">
+                🛠️ 3D 피트 크루 타이어 교체 중...<br>
+                <span style="font-size:12px; color:#aaa;">(잠시만 기다려 주세요)</span>
+            </div>
         </div>
 
         <!-- Summary Result Modal -->
@@ -307,7 +322,7 @@ game_3d_html = """
     </div>
 
 <script>
-// --- Three.js Initialization ---
+// --- Three.js Setup ---
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x6ca6cd);
@@ -320,7 +335,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 container.appendChild(renderer.domElement);
 
-// --- Lighting ---
+// Lighting
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
 scene.add(ambientLight);
 
@@ -329,12 +344,6 @@ dirLight.position.set(200, 300, 150);
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.width = 2048;
 dirLight.shadow.mapSize.height = 2048;
-dirLight.shadow.camera.near = 10;
-dirLight.shadow.camera.far = 800;
-dirLight.shadow.camera.left = -300;
-dirLight.shadow.camera.right = 300;
-dirLight.shadow.camera.top = 300;
-dirLight.shadow.camera.bottom = -300;
 scene.add(dirLight);
 
 // Grass Surface
@@ -348,7 +357,7 @@ scene.add(grass);
 
 // --- 3D Real F1 Track Ribbon Generator ---
 const trackPoints = [
-    new THREE.Vector3(0, 0, 220),       // Start / Main Straight
+    new THREE.Vector3(0, 0, 220),       // Main Straight (z=220)
     new THREE.Vector3(260, 0, 220),     // Turn 1
     new THREE.Vector3(340, 0, 140),     // Chicane
     new THREE.Vector3(300, 0, 30),      
@@ -359,12 +368,12 @@ const trackPoints = [
     new THREE.Vector3(-280, 0, -120),   // S-Curve
     new THREE.Vector3(-220, 0, 20),     
     new THREE.Vector3(-300, 0, 120),    // Parabolica
-    new THREE.Vector3(-200, 0, 220)     // Final Corner to Main Straight
+    new THREE.Vector3(-200, 0, 220)     // Final Corner
 ];
 
 const trackCurve = new THREE.CatmullRomCurve3(trackPoints, true, 'catmullrom', 0.25);
 const SEGMENTS = 360;
-const ROAD_WIDTH = 34;
+const ROAD_WIDTH = 34; // Main track z ranges between ~203 and ~237
 
 function build3DTrack() {
     const points = trackCurve.getSpacedPoints(SEGMENTS);
@@ -390,7 +399,7 @@ function build3DTrack() {
             roadIndices.push(r1 + 1, r2 + 1, r2);
         }
 
-        // Red/White Kerb Borders
+        // Red/White Kerbs
         const lKerbOuter = new THREE.Vector3().addVectors(p1, norm.clone().multiplyScalar(ROAD_WIDTH / 2 + 3.0));
         const rKerbOuter = new THREE.Vector3().addVectors(p1, norm.clone().multiplyScalar(-ROAD_WIDTH / 2 - 3.0));
         const color = (Math.floor(i / 2) % 2 === 0) ? [0.9, 0.1, 0.1] : [0.95, 0.95, 0.95];
@@ -413,8 +422,7 @@ function build3DTrack() {
     roadGeo.setIndex(roadIndices);
     roadGeo.computeVertexNormals();
 
-    const roadMat = new THREE.MeshStandardMaterial({ color: 0x222226, roughness: 0.85 });
-    const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+    const roadMesh = new THREE.Mesh(roadGeo, new THREE.MeshStandardMaterial({ color: 0x222226, roughness: 0.85 }));
     roadMesh.receiveShadow = true;
     scene.add(roadMesh);
 
@@ -423,91 +431,109 @@ function build3DTrack() {
     kerbGeo.setAttribute('color', new THREE.Float32BufferAttribute(kerbColors, 3));
     kerbGeo.setIndex(kerbIndices);
     
-    const kerbMesh = new THREE.Mesh(kerbGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
-    scene.add(kerbMesh);
+    scene.add(new THREE.Mesh(kerbGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide })));
 }
 build3DTrack();
 
-// --- Outer 3D Guardrails & Wall Barriers ---
-function buildGuardrails() {
-    const points = trackCurve.getSpacedPoints(180);
-    const railMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.3 });
-
-    for (let i = 0; i < points.length; i += 2) {
-        const p1 = points[i];
-        const p2 = points[(i + 1) % points.length];
-        const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
-        const norm = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
-
-        const postPos = p1.clone().add(norm.multiplyScalar(ROAD_WIDTH / 2 + 4.5));
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 3), railMat);
-        post.position.set(postPos.x, 1.5, postPos.z);
-        scene.add(post);
-    }
-}
-buildGuardrails();
-
-// --- Detailed 3D Pit Lane & Pit Garages ---
+// --- Explicit Separated Pit Lane & Garages (z=242~258, COMPLETELY OUTSIDE Main Track) ---
 const pitGroup = new THREE.Group();
-pitGroup.position.set(0, 0, 220);
 
-// Pit Wall Separation Barrier
+// Solid Pit Wall between Main Track and Pit Lane (z=238)
 const pitWall = new THREE.Mesh(
-    new THREE.BoxGeometry(100, 2.2, 1.2),
-    new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.5 })
+    new THREE.BoxGeometry(140, 2.4, 1.6),
+    new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.4 })
 );
-pitWall.position.set(20, 1.1, ROAD_WIDTH / 2 + 1.5);
+pitWall.position.set(20, 1.2, 238);
 pitGroup.add(pitWall);
 
-// Pit Lane Asphalt
+// Pit Lane Off-Track Asphalt Surface (z=250)
 const pitAsphalt = new THREE.Mesh(
-    new THREE.PlaneGeometry(100, 16),
+    new THREE.PlaneGeometry(140, 20),
     new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 })
 );
 pitAsphalt.rotation.x = -Math.PI / 2;
-pitAsphalt.position.set(20, 0.02, ROAD_WIDTH / 2 + 10);
+pitAsphalt.position.set(20, 0.02, 250);
 pitGroup.add(pitAsphalt);
 
-// 3D Pit Garage Buildings (4 Team Garages)
+// 4 Team Garages Buildings
 const garageColors = [0xef4444, 0x1e3a8a, 0x06b6d4, 0xf97316];
 for (let i = 0; i < 4; i++) {
     const gBuilding = new THREE.Mesh(
-        new THREE.BoxGeometry(20, 6, 12),
-        new THREE.MeshStandardMaterial({ color: garageColors[i], metalness: 0.4 })
+        new THREE.BoxGeometry(26, 6.5, 14),
+        new THREE.MeshStandardMaterial({ color: garageColors[i], metalness: 0.3 })
     );
-    gBuilding.position.set(-20 + i * 24, 3, ROAD_WIDTH / 2 + 19);
+    gBuilding.position.set(-25 + i * 30, 3.25, 262);
     pitGroup.add(gBuilding);
 }
 
-// Interactive Pit Stop Target Box Marking (Orange Outline)
-const pitBoxGeo = new THREE.PlaneGeometry(16, 10);
-const pitBoxMat = new THREE.MeshBasicMaterial({ color: 0xea580c, side: THREE.DoubleSide });
-const pitBoxMesh = new THREE.Mesh(pitBoxGeo, pitBoxMat);
+// Interactive Pit Stop Target Box Marking (Orange Paint Box at x=20~60, z=245~255)
+const pitBoxMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(24, 10),
+    new THREE.MeshBasicMaterial({ color: 0xea580c, side: THREE.DoubleSide })
+);
 pitBoxMesh.rotation.x = -Math.PI / 2;
-pitBoxMesh.position.set(20, 0.04, ROAD_WIDTH / 2 + 10);
+pitBoxMesh.position.set(40, 0.04, 250);
 pitGroup.add(pitBoxMesh);
 
 scene.add(pitGroup);
 
-// --- Finish Line Gantry & Start Lights Mesh ---
+// Finish Line Gantry
 const gantryGroup = new THREE.Group();
 gantryGroup.position.set(0, 0, 220);
-
 const p1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 12, 1.5), new THREE.MeshStandardMaterial({ color: 0x333333 }));
 p1.position.set(-ROAD_WIDTH/2 - 3, 6, 0);
 const p2 = p1.clone();
 p2.position.set(ROAD_WIDTH/2 + 3, 6, 0);
-
 const topBeam = new THREE.Mesh(new THREE.BoxGeometry(ROAD_WIDTH + 8, 2, 2), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
 topBeam.position.set(0, 11, 0);
 gantryGroup.add(p1, p2, topBeam);
 scene.add(gantryGroup);
 
+// --- 3D Pit Crew Characters (4 Humanoid Members) ---
+function createPitCrewMember() {
+    const crewGroup = new THREE.Group();
+
+    // Body/Torso
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.2, 8), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+    torso.position.y = 0.9;
+    crewGroup.add(torso);
+
+    // Helmet/Head
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 12), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+    head.position.y = 1.7;
+    crewGroup.add(head);
+
+    // Arm holding tire tool
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.5, 0.12), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+    arm.position.set(0.3, 1.0, 0.2);
+    arm.rotation.z = -Math.PI / 4;
+    crewGroup.add(arm);
+
+    return crewGroup;
+}
+
+const pitCrewMembers = [
+    createPitCrewMember(), // Front Left
+    createPitCrewMember(), // Front Right
+    createPitCrewMember(), // Rear Left
+    createPitCrewMember()  // Rear Right
+];
+
+// Idle position by garage wall (z=258)
+const pitCrewIdleOffsets = [
+    { x: 37, z: 258 }, { x: 43, z: 258 },
+    { x: 37, z: 260 }, { x: 43, z: 260 }
+];
+
+pitCrewMembers.forEach((member, i) => {
+    member.position.set(pitCrewIdleOffsets[i].x, 0, pitCrewIdleOffsets[i].z);
+    scene.add(member);
+});
+
 // --- 3D Car Factory Mesh Generator ---
 function create3DCar(colorHex, rWingColorHex) {
     const carGroup = new THREE.Group();
 
-    // Body Chassis
     const body = new THREE.Mesh(
         new THREE.BoxGeometry(2.4, 0.75, 5.4),
         new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2, metalness: 0.6 })
@@ -516,7 +542,6 @@ function create3DCar(colorHex, rWingColorHex) {
     body.castShadow = true;
     carGroup.add(body);
 
-    // Cockpit
     const cockpit = new THREE.Mesh(
         new THREE.SphereGeometry(0.6, 16, 16),
         new THREE.MeshStandardMaterial({ color: 0x111111 })
@@ -524,7 +549,6 @@ function create3DCar(colorHex, rWingColorHex) {
     cockpit.position.set(0, 0.9, -0.2);
     carGroup.add(cockpit);
 
-    // Front Wing
     const fWing = new THREE.Mesh(
         new THREE.BoxGeometry(3.8, 0.12, 1.0),
         new THREE.MeshStandardMaterial({ color: 0x111111 })
@@ -533,7 +557,6 @@ function create3DCar(colorHex, rWingColorHex) {
     fWing.castShadow = true;
     carGroup.add(fWing);
 
-    // Rear Wing
     const rearWingGroup = new THREE.Group();
     rearWingGroup.position.set(0, 1.2, -2.5);
     const rWingMain = new THREE.Mesh(
@@ -552,7 +575,6 @@ function create3DCar(colorHex, rWingColorHex) {
 
     carGroup.add(rearWingGroup);
 
-    // Wheels
     const wheels = [];
     const wheelPositions = [[-1.4, 0.6, 1.9], [1.4, 0.6, 1.9], [-1.4, 0.6, -1.9], [1.4, 0.6, -1.9]];
     const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0d0d0d, roughness: 0.9 });
@@ -586,13 +608,10 @@ const aiCars = aiCarData.map(d => {
     return { ...d, obj, lap: 0, progress: 0 };
 });
 
-// Grid Alignment Setup (Start Facing Forward +X Direction)
 function alignGridPositions() {
-    // Player P2 Slot (Grid Position)
     playerObj.group.position.set(-5, 0, 214);
-    playerObj.group.rotation.y = Math.PI / 2; // Facing +X down main straight
+    playerObj.group.rotation.y = Math.PI / 2;
     
-    // AI Grid Slots (P1, P3, P4)
     aiCars.forEach(ai => {
         ai.obj.group.position.set(ai.gridX, 0, ai.gridZ);
         ai.obj.group.rotation.y = Math.PI / 2;
@@ -618,12 +637,13 @@ let keys = {};
 
 // Physics Variables
 let speed = 0;
-let carAngle = Math.PI / 2; // Starting facing +X direction
+let carAngle = Math.PI / 2;
 let steerSmooth = 0;
 let inPit = false;
+let isPitChanging = false;
 
 // Race Flow State
-let startState = 'WAITING'; // WAITING -> COUNTDOWN -> GO
+let startState = 'WAITING';
 let maxLaps = 5;
 let playerLap = 0;
 let lapStartTime = Date.now();
@@ -631,12 +651,11 @@ let lapTimes = [];
 let checkpointPassed = false;
 let isFinished = false;
 
-// Key Handlers
 window.addEventListener('keydown', e => {
     if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","KeyW","KeyS","KeyA","KeyD"].includes(e.code)) {
         e.preventDefault();
     }
-    if (e.code === 'Space' && !e.repeat && startState === 'GO' && !isFinished) {
+    if (e.code === 'Space' && !e.repeat && startState === 'GO' && !isFinished && !inPit) {
         wingPresetIndex = (wingPresetIndex + 1) % wingPresetAngles.length;
         wingAngle = wingPresetAngles[wingPresetIndex];
         playerObj.rearWingGroup.rotation.x = (wingAngle * Math.PI) / 180;
@@ -646,7 +665,6 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => keys[e.code] = false);
 
-// F1 Start Lights Sequence (5 Red Lights -> Lights Out!)
 function initGame() {
     maxLaps = parseInt(document.getElementById('selectLaps').value);
     currentTire = document.getElementById('selectTire').value;
@@ -670,10 +688,8 @@ function runStartLightsSequence() {
             lightStep++;
         } else {
             clearInterval(interval);
-            // Random delay between 0.8s and 2.0s before Lights Out
             const randomDelay = 800 + Math.random() * 1200;
             setTimeout(() => {
-                // LIGHTS OUT & AWAY WE GO!
                 for (let i = 1; i <= 5; i++) {
                     const el = document.getElementById(`light${i}`);
                     el.classList.remove('light-red');
@@ -684,7 +700,6 @@ function runStartLightsSequence() {
                 startState = 'GO';
                 lapStartTime = Date.now();
 
-                // Hide light panel after 2.5s
                 setTimeout(() => {
                     document.getElementById('startLightOverlay').style.display = 'none';
                 }, 2500);
@@ -702,7 +717,6 @@ function updateTireUI() {
 }
 
 function updatePhysics() {
-    // Lock physics before GO signal (Prevents False Start)
     if (startState !== 'GO' || isFinished) return;
 
     if (inPit) {
@@ -716,7 +730,6 @@ function updatePhysics() {
     const maxSpeed = (0.98 - (wingAngle / 40) * 0.48) * spec.speedMult * wearGripPenalty;
     const gripFactor = (0.009 + (wingAngle / 40) * 0.017) * spec.gripMult * wearGripPenalty;
 
-    // Throttle & Brake Controls
     if (keys['ArrowUp'] || keys['KeyW']) speed += 0.008;
     else if (keys['ArrowDown'] || keys['KeyS']) speed -= 0.012;
     else speed *= 0.985;
@@ -724,7 +737,6 @@ function updatePhysics() {
     if (speed > maxSpeed) speed = maxSpeed;
     if (speed < -maxSpeed * 0.3) speed = -maxSpeed * 0.3;
 
-    // Smooth Steering Inertia
     const steerTarget = (keys['ArrowLeft'] || keys['KeyA']) ? 1 : ((keys['ArrowRight'] || keys['KeyD']) ? -1 : 0);
     steerSmooth += (steerTarget - steerSmooth) * 0.1;
 
@@ -738,15 +750,15 @@ function updatePhysics() {
         if (tireWear < 0) tireWear = 0;
     }
 
-    // Off-Track Grass Drag Penalty
     const carPos = playerObj.group.position;
     const currentProgress = getTrackProgress(carPos);
     const closestPoint = trackCurve.getPointAt(currentProgress % 1);
-    if (carPos.distanceTo(closestPoint) > ROAD_WIDTH / 2 + 1) {
+    
+    // Check if on grass (and not inside pit lane)
+    if (carPos.distanceTo(closestPoint) > ROAD_WIDTH / 2 + 1 && carPos.z < 238) {
         speed *= 0.88;
     }
 
-    // Move Player 3D Mesh
     carPos.x += Math.sin(carAngle) * speed;
     carPos.z += Math.cos(carAngle) * speed;
     playerObj.group.rotation.y = carAngle;
@@ -755,21 +767,29 @@ function updatePhysics() {
     playerObj.wheels[1].rotation.y = steerSmooth * 0.4;
     playerObj.wheels.forEach(w => w.rotation.x += speed * 0.4);
 
-    // 3rd Person Chase Camera Follow
+    // Camera follow
     const camOffset = new THREE.Vector3(0, 5.5, -14).applyAxisAngle(new THREE.Vector3(0, 1, 0), carAngle);
     camera.position.lerp(carPos.clone().add(camOffset), 0.2);
     camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1.2, 0)));
 
-    // Pit Stop Area Check (Garage Box Area)
-    if (carPos.x > 10 && carPos.x < 30 && carPos.z > 220 && carPos.z < 240 && !inPit) {
+    // STRICT OFF-TRACK PIT STOP TRIGGER CHECK (z > 242 AND z < 258 AND x > 20 AND x < 60)
+    // Driving on the main track (z ~ 220) will NEVER trigger this!
+    if (carPos.z > 242 && carPos.z < 258 && carPos.x > 20 && carPos.x < 60 && !inPit && !isPitChanging) {
         inPit = true;
+        speed = 0;
+        // Park car neatly in pit box
+        carPos.set(40, 0, 250);
+        carAngle = Math.PI / 2;
+        playerObj.group.rotation.y = carAngle;
+
+        document.getElementById('pitButtons').style.display = 'block';
+        document.getElementById('pitStatus').style.display = 'none';
         document.getElementById('pitModal').style.display = 'block';
     }
 
-    // Checkpoints & Finish Line Crossing
     if (carPos.z < -180) checkpointPassed = true;
 
-    if (checkpointPassed && Math.abs(carPos.x) < 25 && carPos.z > 215) {
+    if (checkpointPassed && Math.abs(carPos.x) < 25 && carPos.z > 215 && carPos.z < 235) {
         const now = Date.now();
         const lapTime = (now - lapStartTime) / 1000;
         lapTimes.push(lapTime);
@@ -786,7 +806,7 @@ function updatePhysics() {
         }
     }
 
-    // Move AI Competitors
+    // AI Cars Update
     aiCars.forEach(ai => {
         ai.progress = (ai.progress + ai.speed * 0.0004) % 1;
         const pt = trackCurve.getPointAt(ai.progress);
@@ -802,12 +822,71 @@ function updatePhysics() {
 
     calculateStandings(currentProgress);
 
-    // Telemetry Update
     document.getElementById('speedVal').innerText = Math.round(Math.abs(speed) * 270);
     document.getElementById('wearVal').innerText = `${Math.round(tireWear)}%`;
     if (!isFinished) {
         document.getElementById('timeVal').innerText = `${((Date.now() - lapStartTime) / 1000).toFixed(2)}s`;
     }
+}
+
+// 3D Pit Crew Tire Changing Animation Process
+function changeTire(newCompound) {
+    if (isPitChanging) return;
+    isPitChanging = true;
+
+    currentTire = newCompound;
+    tireWear = 100.0;
+    updateTireUI();
+
+    // Hide selection buttons, show pit changing text
+    document.getElementById('pitButtons').style.display = 'none';
+    document.getElementById('pitStatus').style.display = 'block';
+
+    // 1. Pit crew runs to 4 wheels of player's car
+    const wheelTargets = [
+        { x: 38.4, z: 252.0 }, // FL
+        { x: 41.6, z: 252.0 }, // FR
+        { x: 38.4, z: 248.0 }, // RL
+        { x: 41.6, z: 248.0 }  // RR
+    ];
+
+    let crewStep = 0;
+    const animateCrewIn = setInterval(() => {
+        crewStep += 0.1;
+        pitCrewMembers.forEach((member, i) => {
+            member.position.x += (wheelTargets[i].x - member.position.x) * 0.2;
+            member.position.z += (wheelTargets[i].z - member.position.z) * 0.2;
+            member.rotation.y += 0.2; // Tool rotation effect
+        });
+
+        if (crewStep >= 1.0) {
+            clearInterval(animateCrewIn);
+            
+            // 2. Tire swap delay (2 seconds)
+            setTimeout(() => {
+                // 3. Pit crew returns to garage
+                const animateCrewOut = setInterval(() => {
+                    pitCrewMembers.forEach((member, i) => {
+                        member.position.x += (pitCrewIdleOffsets[i].x - member.position.x) * 0.2;
+                        member.position.z += (pitCrewIdleOffsets[i].z - member.position.z) * 0.2;
+                    });
+                }, 50);
+
+                setTimeout(() => {
+                    clearInterval(animateCrewOut);
+                    pitCrewMembers.forEach((member, i) => {
+                        member.position.set(pitCrewIdleOffsets[i].x, 0, pitCrewIdleOffsets[i].z);
+                    });
+
+                    // Resume Race
+                    inPit = false;
+                    isPitChanging = false;
+                    document.getElementById('pitModal').style.display = 'none';
+                }, 800);
+
+            }, 1800);
+        }
+    }, 50);
 }
 
 function calculateStandings(playerProgress) {
@@ -833,17 +912,6 @@ function getTrackProgress(pos) {
         }
     }
     return closestT;
-}
-
-function changeTire(newCompound) {
-    currentTire = newCompound;
-    tireWear = 100.0;
-    updateTireUI();
-
-    setTimeout(() => {
-        inPit = false;
-        document.getElementById('pitModal').style.display = 'none';
-    }, 1500);
 }
 
 function showSummaryModal() {
