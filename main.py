@@ -2,20 +2,20 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="F1 3D Championship - Real Pit Stop",
+    page_title="F1 3D Grand Prix - Real Pit Camera & Crew",
     page_icon="🏎️",
     layout="wide"
 )
 
-st.title("🏎️ REAL F1 3D 그랑프리: 3D 피트 크루 타이어 교체 시뮬레이터")
+st.title("🏎️ REAL F1 3D 그랑프리: 3D 피트 카메라 & 타이어 교체 애니메이션")
 st.markdown("""
-**[피트스탑 이용 안내]**
-- 🚨 **트랙 오발동 방지:** 메인 트랙을 달릴 때는 피트스탑이 뜨지 않습니다. 타이어 교체가 필요하면 **오른쪽 피트 차선(Pit Lane)**으로 직접 핸들을 꺾어 들어가세요!
-- 🛞 **3D 피트 크루 타이어 교체:** 피트 박스 정지 후 `SOFT` / `MEDIUM` / `HARD`를 누르면 **4명의 3D 피트 크루원들이 달려와 직접 바퀴를 갈아줍니다.**
-- 🚦 **스타트 신호등:** 5개의 빨간 불이 켜진 후 일제히 꺼지는 **LIGHTS OUT** 순간에 출발하세요.
+**[피트스탑 & 3D 연출 개선 사항]**
+- 🛑 **팝업 중복 발동 완전 차단:** 타이어 교체 후 피트 차선 탈출 시까지 팝업이 다시 뜨지 않고 자동으로 출발합니다.
+- 🎥 **3D 피트 클로즈업 시점:** 타이어를 누르는 즉시 **중앙 팝업 창이 닫히고, 측면 3D 피트 카메라**로 전환되어 4명의 피트 크루가 새 바퀴를 갈아끼우는 모습을 직접 감상할 수 있습니다.
+- 🚦 **F1 스타트 신호등:** 5개 레드 라이트 점등 후 **LIGHTS OUT(초록불)** 순간에 가속하세요.
 """)
 
-# HTML5 + Three.js Real 3D F1 Engine with Animated Pit Crew
+# HTML5 + Three.js Real 3D F1 Engine with Side Pit Camera & Animated Tire Swap
 game_3d_html = """
 <!DOCTYPE html>
 <html>
@@ -72,6 +72,25 @@ game_3d_html = """
         .badge-soft { background: #e63946; }
         .badge-medium { background: #eab308; color: black; }
         .badge-hard { background: #94a3b8; color: black; }
+
+        /* Pit Stop Live Action Banner */
+        #pitLiveBanner {
+            display: none;
+            position: absolute;
+            top: 75px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(234, 88, 12, 0.92);
+            color: white;
+            padding: 8px 24px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 15px;
+            box-shadow: 0 0 20px rgba(234, 88, 12, 0.8);
+            z-index: 15;
+            animation: pulse 1s infinite alternate;
+        }
+        @keyframes pulse { 0% { transform: translateX(-50%) scale(1); } 100% { transform: translateX(-50%) scale(1.05); } }
 
         /* F1 Start Light Display Overlay */
         #startLightOverlay {
@@ -164,14 +183,14 @@ game_3d_html = """
         }
         .btn-start:hover { transform: scale(1.03); background: #ffd633; }
 
-        /* Pit Stop Interactive Modal */
+        /* Pit Stop Choice Modal */
         #pitModal {
             display: none;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(15, 23, 42, 0.98);
+            background: rgba(15, 23, 42, 0.96);
             border: 3px solid #ea580c;
             padding: 22px 30px;
             border-radius: 16px;
@@ -179,7 +198,7 @@ game_3d_html = """
             z-index: 60;
             color: white;
             min-width: 340px;
-            box-shadow: 0 0 40px rgba(234, 88, 12, 0.6);
+            box-shadow: 0 0 40px rgba(234, 88, 12, 0.7);
         }
         #pitModal h3 { margin: 0 0 10px 0; color: #ea580c; }
         .btn-compound {
@@ -193,16 +212,6 @@ game_3d_html = """
             transition: transform 0.15s;
         }
         .btn-compound:hover { transform: scale(1.08); }
-
-        #pitStatus {
-            display: none;
-            color: #ffcc00;
-            font-size: 16px;
-            font-weight: bold;
-            margin-top: 10px;
-            animation: blink 0.8s infinite alternate;
-        }
-        @keyframes blink { 0% { opacity: 0.4; } 100% { opacity: 1; } }
 
         /* Summary Result Modal */
         #summaryModal {
@@ -259,6 +268,9 @@ game_3d_html = """
             <div class="hud-item">⏱️ 타임: <span id="timeVal" class="hud-value">0.00s</span></div>
         </div>
 
+        <!-- Live Action Pit Status Banner -->
+        <div id="pitLiveBanner">🛠️ 3D PIT CREW CHANGING TIRES...</div>
+
         <!-- F1 Lights Out Display Panel -->
         <div id="startLightOverlay">
             <span style="font-size:12px; font-weight:bold; color:#aaa; letter-spacing:1px;">FORMULA 1 START LIGHTS</span>
@@ -297,17 +309,11 @@ game_3d_html = """
 
         <!-- Pit Stop Interactive Modal -->
         <div id="pitModal">
-            <h3>⛽ F1 PIT STOP! 타이어 교체</h3>
-            <div id="pitButtons">
-                <p style="font-size:13px; margin-bottom:12px;">교체할 타이어 컴파운드를 선택하세요:</p>
-                <button class="btn-compound" style="background:#e63946; color:white;" onclick="changeTire('SOFT')">🔴 SOFT</button>
-                <button class="btn-compound" style="background:#eab308; color:black;" onclick="changeTire('MEDIUM')">🟡 MEDIUM</button>
-                <button class="btn-compound" style="background:#94a3b8; color:black;" onclick="changeTire('HARD')">⚪ HARD</button>
-            </div>
-            <div id="pitStatus">
-                🛠️ 3D 피트 크루 타이어 교체 중...<br>
-                <span style="font-size:12px; color:#aaa;">(잠시만 기다려 주세요)</span>
-            </div>
+            <h3>⛽ F1 PIT STOP! 타이어 선택</h3>
+            <p style="font-size:13px; margin-bottom:12px;">교체할 타이어 컴파운드를 선택하세요:</p>
+            <button class="btn-compound" style="background:#e63946; color:white;" onclick="changeTire('SOFT')">🔴 SOFT</button>
+            <button class="btn-compound" style="background:#eab308; color:black;" onclick="changeTire('MEDIUM')">🟡 MEDIUM</button>
+            <button class="btn-compound" style="background:#94a3b8; color:black;" onclick="changeTire('HARD')">⚪ HARD</button>
         </div>
 
         <!-- Summary Result Modal -->
@@ -373,7 +379,7 @@ const trackPoints = [
 
 const trackCurve = new THREE.CatmullRomCurve3(trackPoints, true, 'catmullrom', 0.25);
 const SEGMENTS = 360;
-const ROAD_WIDTH = 34; // Main track z ranges between ~203 and ~237
+const ROAD_WIDTH = 34;
 
 function build3DTrack() {
     const points = trackCurve.getSpacedPoints(SEGMENTS);
@@ -435,44 +441,44 @@ function build3DTrack() {
 }
 build3DTrack();
 
-// --- Explicit Separated Pit Lane & Garages (z=242~258, COMPLETELY OUTSIDE Main Track) ---
+// --- Explicit Separated Pit Lane & Garages (z=245~265) ---
 const pitGroup = new THREE.Group();
 
 // Solid Pit Wall between Main Track and Pit Lane (z=238)
 const pitWall = new THREE.Mesh(
-    new THREE.BoxGeometry(140, 2.4, 1.6),
+    new THREE.BoxGeometry(160, 2.4, 1.6),
     new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.4 })
 );
 pitWall.position.set(20, 1.2, 238);
 pitGroup.add(pitWall);
 
-// Pit Lane Off-Track Asphalt Surface (z=250)
+// Pit Lane Off-Track Asphalt Surface (z=252)
 const pitAsphalt = new THREE.Mesh(
-    new THREE.PlaneGeometry(140, 20),
+    new THREE.PlaneGeometry(160, 24),
     new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 })
 );
 pitAsphalt.rotation.x = -Math.PI / 2;
-pitAsphalt.position.set(20, 0.02, 250);
+pitAsphalt.position.set(20, 0.02, 252);
 pitGroup.add(pitAsphalt);
 
 // 4 Team Garages Buildings
 const garageColors = [0xef4444, 0x1e3a8a, 0x06b6d4, 0xf97316];
 for (let i = 0; i < 4; i++) {
     const gBuilding = new THREE.Mesh(
-        new THREE.BoxGeometry(26, 6.5, 14),
+        new THREE.BoxGeometry(28, 7.0, 14),
         new THREE.MeshStandardMaterial({ color: garageColors[i], metalness: 0.3 })
     );
-    gBuilding.position.set(-25 + i * 30, 3.25, 262);
+    gBuilding.position.set(-30 + i * 32, 3.5, 268);
     pitGroup.add(gBuilding);
 }
 
-// Interactive Pit Stop Target Box Marking (Orange Paint Box at x=20~60, z=245~255)
+// Interactive Pit Stop Box Paint Marking (x=30~50, z=252)
 const pitBoxMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(24, 10),
+    new THREE.PlaneGeometry(22, 12),
     new THREE.MeshBasicMaterial({ color: 0xea580c, side: THREE.DoubleSide })
 );
 pitBoxMesh.rotation.x = -Math.PI / 2;
-pitBoxMesh.position.set(40, 0.04, 250);
+pitBoxMesh.position.set(40, 0.04, 252);
 pitGroup.add(pitBoxMesh);
 
 scene.add(pitGroup);
@@ -489,40 +495,44 @@ topBeam.position.set(0, 11, 0);
 gantryGroup.add(p1, p2, topBeam);
 scene.add(gantryGroup);
 
-// --- 3D Pit Crew Characters (4 Humanoid Members) ---
+// --- 3D Pit Crew Members & Carried Spare Tires ---
 function createPitCrewMember() {
     const crewGroup = new THREE.Group();
 
     // Body/Torso
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.2, 8), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
-    torso.position.y = 0.9;
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.3, 8), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+    torso.position.y = 0.95;
     crewGroup.add(torso);
 
-    // Helmet/Head
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 12), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-    head.position.y = 1.7;
+    // Helmet
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 12), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+    head.position.y = 1.75;
     crewGroup.add(head);
 
-    // Arm holding tire tool
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.5, 0.12), new THREE.MeshStandardMaterial({ color: 0x333333 }));
-    arm.position.set(0.3, 1.0, 0.2);
-    arm.rotation.z = -Math.PI / 4;
-    crewGroup.add(arm);
+    // Carried 3D Tire
+    const spareTireMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.8 });
+    const spareTire = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.45, 16), spareTireMat);
+    spareTire.rotation.z = Math.PI / 2;
+    spareTire.position.set(0, 1.0, 0.4);
+    crewGroup.add(spareTire);
 
-    return crewGroup;
+    return { crewGroup, spareTireMat };
 }
 
-const pitCrewMembers = [
-    createPitCrewMember(), // Front Left
-    createPitCrewMember(), // Front Right
-    createPitCrewMember(), // Rear Left
-    createPitCrewMember()  // Rear Right
+const pitCrewData = [
+    createPitCrewMember(), // FL
+    createPitCrewMember(), // FR
+    createPitCrewMember(), // RL
+    createPitCrewMember()  // RR
 ];
 
-// Idle position by garage wall (z=258)
+const pitCrewMembers = pitCrewData.map(d => d.crewGroup);
+const pitCrewTireMats = pitCrewData.map(d => d.spareTireMat);
+
+// Idle positions at pit wall (z=264)
 const pitCrewIdleOffsets = [
-    { x: 37, z: 258 }, { x: 43, z: 258 },
-    { x: 37, z: 260 }, { x: 43, z: 260 }
+    { x: 34, z: 264 }, { x: 46, z: 264 },
+    { x: 34, z: 266 }, { x: 46, z: 266 }
 ];
 
 pitCrewMembers.forEach((member, i) => {
@@ -530,7 +540,7 @@ pitCrewMembers.forEach((member, i) => {
     scene.add(member);
 });
 
-// --- 3D Car Factory Mesh Generator ---
+// --- 3D Car Mesh Factory Generator ---
 function create3DCar(colorHex, rWingColorHex) {
     const carGroup = new THREE.Group();
 
@@ -635,12 +645,13 @@ let currentTire = 'MEDIUM';
 let tireWear = 100.0;
 let keys = {};
 
-// Physics Variables
+// Physics & Pit Flow Variables
 let speed = 0;
 let carAngle = Math.PI / 2;
 let steerSmooth = 0;
 let inPit = false;
 let isPitChanging = false;
+let pitCooldown = false; // Prevents re-triggering modal
 
 // Race Flow State
 let startState = 'WAITING';
@@ -714,6 +725,9 @@ function updateTireUI() {
     badge.innerText = currentTire;
     badge.className = `badge ${spec.badgeClass}`;
     playerObj.wheelMat.color.setHex(spec.wheelColor);
+    
+    // Update Spare Tires held by Pit Crew Members
+    pitCrewTireMats.forEach(m => m.color.setHex(spec.wheelColor));
 }
 
 function updatePhysics() {
@@ -754,9 +768,14 @@ function updatePhysics() {
     const currentProgress = getTrackProgress(carPos);
     const closestPoint = trackCurve.getPointAt(currentProgress % 1);
     
-    // Check if on grass (and not inside pit lane)
+    // Check if on grass
     if (carPos.distanceTo(closestPoint) > ROAD_WIDTH / 2 + 1 && carPos.z < 238) {
         speed *= 0.88;
+    }
+
+    // Reset pit cooldown once car leaves pit lane (x > 80 or z < 235)
+    if (pitCooldown && (carPos.x > 80 || carPos.z < 235)) {
+        pitCooldown = false;
     }
 
     carPos.x += Math.sin(carAngle) * speed;
@@ -767,23 +786,28 @@ function updatePhysics() {
     playerObj.wheels[1].rotation.y = steerSmooth * 0.4;
     playerObj.wheels.forEach(w => w.rotation.x += speed * 0.4);
 
-    // Camera follow
-    const camOffset = new THREE.Vector3(0, 5.5, -14).applyAxisAngle(new THREE.Vector3(0, 1, 0), carAngle);
-    camera.position.lerp(carPos.clone().add(camOffset), 0.2);
-    camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1.2, 0)));
+    // --- Dynamic Camera System ---
+    if (inPit || isPitChanging) {
+        // 3D Side Pit Camera Focus (Close-up view of Pit Crew swapping tires!)
+        const pitCamPos = new THREE.Vector3(carPos.x - 4, 3.5, carPos.z + 10);
+        camera.position.lerp(pitCamPos, 0.15);
+        camera.lookAt(carPos.x, 1.2, carPos.z);
+    } else {
+        // Standard 3rd Person Chase Camera
+        const camOffset = new THREE.Vector3(0, 5.5, -14).applyAxisAngle(new THREE.Vector3(0, 1, 0), carAngle);
+        camera.position.lerp(carPos.clone().add(camOffset), 0.2);
+        camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1.2, 0)));
+    }
 
-    // STRICT OFF-TRACK PIT STOP TRIGGER CHECK (z > 242 AND z < 258 AND x > 20 AND x < 60)
-    // Driving on the main track (z ~ 220) will NEVER trigger this!
-    if (carPos.z > 242 && carPos.z < 258 && carPos.x > 20 && carPos.x < 60 && !inPit && !isPitChanging) {
+    // STRICT OFF-TRACK PIT STOP TRIGGER CHECK (z > 244 AND z < 260 AND x > 25 AND x < 55)
+    if (carPos.z > 244 && carPos.z < 260 && carPos.x > 25 && carPos.x < 55 && !inPit && !isPitChanging && !pitCooldown) {
         inPit = true;
         speed = 0;
         // Park car neatly in pit box
-        carPos.set(40, 0, 250);
+        carPos.set(40, 0, 252);
         carAngle = Math.PI / 2;
         playerObj.group.rotation.y = carAngle;
 
-        document.getElementById('pitButtons').style.display = 'block';
-        document.getElementById('pitStatus').style.display = 'none';
         document.getElementById('pitModal').style.display = 'block';
     }
 
@@ -838,39 +862,39 @@ function changeTire(newCompound) {
     tireWear = 100.0;
     updateTireUI();
 
-    // Hide selection buttons, show pit changing text
-    document.getElementById('pitButtons').style.display = 'none';
-    document.getElementById('pitStatus').style.display = 'block';
+    // 1. IMMEDIATELY HIDE POPUP MODAL so user can see full 3D action!
+    document.getElementById('pitModal').style.display = 'none';
+    document.getElementById('pitLiveBanner').style.display = 'block';
 
-    // 1. Pit crew runs to 4 wheels of player's car
+    const carPos = playerObj.group.position;
     const wheelTargets = [
-        { x: 38.4, z: 252.0 }, // FL
-        { x: 41.6, z: 252.0 }, // FR
-        { x: 38.4, z: 248.0 }, // RL
-        { x: 41.6, z: 248.0 }  // RR
+        { x: carPos.x - 2.0, z: carPos.z + 2.0 }, // FL
+        { x: carPos.x + 2.0, z: carPos.z + 2.0 }, // FR
+        { x: carPos.x - 2.0, z: carPos.z - 2.0 }, // RL
+        { x: carPos.x + 2.0, z: carPos.z - 2.0 }  // RR
     ];
 
     let crewStep = 0;
     const animateCrewIn = setInterval(() => {
         crewStep += 0.1;
         pitCrewMembers.forEach((member, i) => {
-            member.position.x += (wheelTargets[i].x - member.position.x) * 0.2;
-            member.position.z += (wheelTargets[i].z - member.position.z) * 0.2;
-            member.rotation.y += 0.2; // Tool rotation effect
+            member.position.x += (wheelTargets[i].x - member.position.x) * 0.25;
+            member.position.z += (wheelTargets[i].z - member.position.z) * 0.25;
+            member.rotation.y += 0.3; // Tool spinning effect
         });
 
         if (crewStep >= 1.0) {
             clearInterval(animateCrewIn);
             
-            // 2. Tire swap delay (2 seconds)
+            // 2. Tire swap action delay (1.8 seconds)
             setTimeout(() => {
-                // 3. Pit crew returns to garage
+                // 3. Pit crew returns to garage wall
                 const animateCrewOut = setInterval(() => {
                     pitCrewMembers.forEach((member, i) => {
-                        member.position.x += (pitCrewIdleOffsets[i].x - member.position.x) * 0.2;
-                        member.position.z += (pitCrewIdleOffsets[i].z - member.position.z) * 0.2;
+                        member.position.x += (pitCrewIdleOffsets[i].x - member.position.x) * 0.25;
+                        member.position.z += (pitCrewIdleOffsets[i].z - member.position.z) * 0.25;
                     });
-                }, 50);
+                }, 40);
 
                 setTimeout(() => {
                     clearInterval(animateCrewOut);
@@ -878,15 +902,19 @@ function changeTire(newCompound) {
                         member.position.set(pitCrewIdleOffsets[i].x, 0, pitCrewIdleOffsets[i].z);
                     });
 
-                    // Resume Race
+                    // 4. Automatically release car forward out of pit box & set cooldown!
+                    document.getElementById('pitLiveBanner').style.display = 'none';
+                    speed = 0.55; // Auto acceleration out of pit box
+                    carPos.x += 12; // Advance forward out of box
+                    
                     inPit = false;
                     isPitChanging = false;
-                    document.getElementById('pitModal').style.display = 'none';
-                }, 800);
+                    pitCooldown = true; // Prevents re-trigger loop!
+                }, 700);
 
             }, 1800);
         }
-    }, 50);
+    }, 40);
 }
 
 function calculateStandings(playerProgress) {
