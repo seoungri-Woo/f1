@@ -2,18 +2,18 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="EA SPORTS F1® 25 - Ultimate Circuit & Radio",
+    page_title="EA SPORTS F1® 25 - Full Edition",
     page_icon="🏎️",
     layout="wide"
 )
 
-st.title("🏎️ EA SPORTS F1® 25: 2026 ULTIMATE GRAND PRIX")
+st.title("🏎️ EA SPORTS F1® 25: 2026 ULTIMATE CHAMPIONSHIP")
 st.markdown("""
-**[신규 업데이트 시스템 가이드]**
-- 🛡️ **3D 가드레일 & F1 스폰서 배너:** 서킷 외각에 금속 가드레일과 **ROLEX, PIRELLI, ARAMCO, DHL, HEINEKEN** 배너가 설치되어 1인칭 시야가 명확해집니다.
-- 🛣️ **리얼 3D 피트 레이인:** 트랙 진입로/탈출로가 부드럽게 입체 연결된 피트 차선을 이용할 수 있습니다.
-- 🌧️ **날씨 예보 & WET 타이어 역전:** 비가 내리면 🔵 **WET** 타이어가 가장 빠르며, 슬릭 타이어(Soft/Medium/Hard)는 미끄러집니다.
-- 📻 **F1 팀 라디오 (Team Radio):** 기상 변화 시 피트 엔지니어 무전 비프음과 자막(*"Rain approaching! Box for Wet tyres!"*)이 켜집니다.
+**[수정 및 보완 완료 기능]**
+- 🛡️ **양쪽 3D 가드레일:** 트랙 좌우 양쪽에 은색 3D 가드레일과 스폰서 배너가 1인칭 시야에 명확히 표시됩니다.
+- 🚀 **`[Shift]` ERS 부스터:** Shift 키를 누르고 있으면 배터리를 차출하여 폭발적으로 가속합니다 (FOV 75° 확대).
+- ⛔ **트랙 이탈 감속:** 잔디밭으로 이탈 시 최고 속도가 **시속 70 km/h**로 제한됩니다.
+- 🌧️ **날씨 예보 & WET 타이어:** 비가 오면 WET 타이어만 정속 주행 가능하며, 📻 F1 팀 라디오 무전이 상황을 알려줍니다.
 """)
 
 game_3d_html = """
@@ -176,6 +176,21 @@ game_3d_html = """
             cursor: pointer;
         }
 
+        #offTrackWarning {
+            display: none;
+            position: absolute;
+            top: 125px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(239, 68, 68, 0.95);
+            color: white;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            z-index: 20;
+        }
+
         /* Setup Modal */
         #startModal {
             position: absolute;
@@ -247,6 +262,7 @@ game_3d_html = """
 
     <div id="canvas-container">
         <div id="audioNotice" onclick="initAudio()">🔊 클릭하여 사운드/무전 활성화</div>
+        <div id="offTrackWarning">⚠️ OFF TRACK! SPEED LIMITED TO 70 KM/H</div>
 
         <!-- F1 Team Radio HUD Banner -->
         <div id="teamRadioBanner">
@@ -286,7 +302,7 @@ game_3d_html = """
                 </div>
                 <div id="aeroBadge" class="aero-badge mode-z">Z-MODE</div>
                 <div class="gauge-group">
-                    <div style="font-size:9px; color:#aaa; font-weight:bold;">THR / BRK / ERS</div>
+                    <div style="font-size:9px; color:#aaa; font-weight:bold;">THR / BRK / ERS[Shift]</div>
                     <div class="gauge-bar-bg"><div class="gauge-fill fill-throttle" id="thrBar"></div></div>
                     <div class="gauge-bar-bg"><div class="gauge-fill fill-brake" id="brkBar"></div></div>
                     <div class="gauge-bar-bg"><div class="gauge-fill fill-ers" id="ersBar"></div></div>
@@ -333,7 +349,7 @@ game_3d_html = """
             <button class="btn-start" onclick="initGame()">2026 RACE START</button>
         </div>
 
-        <!-- Pit Stop Interactive Modal -->
+        <!-- Pit Stop Modal -->
         <div id="pitModal">
             <h3>⛽ F1 PIT STOP 타이어 교체</h3>
             <p style="font-size:12px; margin-bottom:10px;">노면 상태에 적합한 컴파운드를 선택하세요:</p>
@@ -344,7 +360,7 @@ game_3d_html = """
             <button class="btn-compound" style="background:#3b82f6; color:white;" onclick="changeTire('WET')">🔵 FULL WET</button>
         </div>
 
-        <!-- Summary Result Modal -->
+        <!-- Summary Modal -->
         <div id="summaryModal">
             <h2>🏁 레이스 종료!</h2>
             <div class="stat-box">🥇 <b>최종 순위:</b> <span id="finalPos" style="color:#ffcc00;">-</span></div>
@@ -375,7 +391,7 @@ function initAudio() {
         engineOsc.connect(engineGain);
         engineGain.connect(audioCtx.destination);
         engineOsc.start();
-        document.getElementById('audioNotice').innerText = '🔊 Audio & Radio Active';
+        document.getElementById('audioNotice').innerText = '🔊 Audio Active';
         playTeamRadio("Radio check. Engine parameters nominal.");
     } catch(e) { console.log(e); }
 }
@@ -394,7 +410,6 @@ function playTeamRadio(msg) {
     banner.style.display = 'flex';
 
     if (audioCtx) {
-        // Radio static sound effect
         const osc = audioCtx.createOscillator();
         const g = audioCtx.createGain();
         osc.type = 'square';
@@ -405,7 +420,6 @@ function playTeamRadio(msg) {
         osc.start();
         osc.stop(audioCtx.currentTime + 0.25);
     }
-
     setTimeout(() => { banner.style.display = 'none'; }, 4500);
 }
 
@@ -418,9 +432,8 @@ function createSponsorTexture(text, bgColor, textColor) {
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, 512, 128);
-
     ctx.fillStyle = textColor;
-    ctx.font = 'bold 52px Arial';
+    ctx.font = 'bold 54px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, 256, 64);
@@ -458,7 +471,7 @@ dirLight.position.set(250, 400, 150);
 dirLight.castShadow = true;
 scene.add(dirLight);
 
-// Ground Grass
+// Ground Grass Plane
 const grassGeo = new THREE.PlaneGeometry(3500, 3500);
 const grassMat = new THREE.MeshLambertMaterial({ color: 0x1c421e });
 const grass = new THREE.Mesh(grassGeo, grassMat);
@@ -490,7 +503,8 @@ function build3DTrackAndGuardrails() {
     const roadVertices = [], roadIndices = [];
     const kerbVertices = [], kerbColors = [], kerbIndices = [];
 
-    const guardrailMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.9, roughness: 0.2 });
+    const guardrailMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, metalness: 0.85, roughness: 0.25 });
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.7 });
 
     for (let i = 0; i <= SEGMENTS; i++) {
         const p1 = points[i % SEGMENTS];
@@ -527,24 +541,41 @@ function build3DTrackAndGuardrails() {
             kerbIndices.push(k1 + 2, k1 + 3, k2 + 2, k1 + 3, k2 + 3, k2 + 2);
         }
 
-        // 3D Metallic Guardrails & Sponsor Banners (Every 6 segments)
-        if (i % 6 === 0) {
-            // Outer Guardrail Rail
-            const gPos = p1.clone().add(norm.clone().multiplyScalar(ROAD_WIDTH / 2 + 5.0));
-            const guardRail = new THREE.Mesh(new THREE.BoxGeometry(6.5, 1.2, 0.3), guardrailMat);
-            guardRail.position.set(gPos.x, 1.2, gPos.z);
-            guardRail.rotation.y = Math.atan2(dir.x, dir.z);
-            scene.add(guardRail);
+        // 🛡️ BOTH INNER & OUTER 3D METALLIC GUARDRAILS (Dense spacing for 1st person view!)
+        if (i % 4 === 0) {
+            const rotY = Math.atan2(dir.x, dir.z);
 
-            // Sponsor Banner (Every 18 segments)
-            if (i % 18 === 0) {
-                const sponsorTex = sponsorTextures[(i / 18) % sponsorTextures.length];
+            // Outer Guardrail (Left)
+            const lPos = p1.clone().add(norm.clone().multiplyScalar(ROAD_WIDTH / 2 + 4.5));
+            const lRail = new THREE.Mesh(new THREE.BoxGeometry(5.2, 1.4, 0.35), guardrailMat);
+            lRail.position.set(lPos.x, 1.4, lPos.z);
+            lRail.rotation.y = rotY;
+            scene.add(lRail);
+
+            const lPost = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 2.8), postMat);
+            lPost.position.set(lPos.x, 1.4, lPos.z);
+            scene.add(lPost);
+
+            // Inner Guardrail (Right)
+            const rPos = p1.clone().add(norm.clone().multiplyScalar(-ROAD_WIDTH / 2 - 4.5));
+            const rRail = new THREE.Mesh(new THREE.BoxGeometry(5.2, 1.4, 0.35), guardrailMat);
+            rRail.position.set(rPos.x, 1.4, rPos.z);
+            rRail.rotation.y = rotY;
+            scene.add(rRail);
+
+            const rPost = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 2.8), postMat);
+            rPost.position.set(rPos.x, 1.4, rPos.z);
+            scene.add(rPost);
+
+            // 🏢 Sponsor Banner Attachment (Every 16 segments)
+            if (i % 16 === 0) {
+                const sponsorTex = sponsorTextures[(i / 16) % sponsorTextures.length];
                 const bannerMesh = new THREE.Mesh(
-                    new THREE.PlaneGeometry(8.0, 2.0),
+                    new THREE.PlaneGeometry(7.5, 1.8),
                     new THREE.MeshBasicMaterial({ map: sponsorTex, side: THREE.DoubleSide })
                 );
-                bannerMesh.position.set(gPos.x, 2.2, gPos.z);
-                bannerMesh.rotation.y = Math.atan2(dir.x, dir.z);
+                bannerMesh.position.set(lPos.x, 2.5, lPos.z);
+                bannerMesh.rotation.y = rotY;
                 scene.add(bannerMesh);
             }
         }
@@ -568,7 +599,7 @@ function build3DTrackAndGuardrails() {
 }
 build3DTrackAndGuardrails();
 
-// --- Real 3D Pit Lane Geometry (Tapered Entry & Exit Parallel Ribbon) ---
+// --- Real 3D Pit Lane Geometry ---
 function buildRealisticPitLane() {
     const pitAsphaltMesh = new THREE.Mesh(
         new THREE.PlaneGeometry(160, 22),
@@ -578,32 +609,27 @@ function buildRealisticPitLane() {
     pitAsphaltMesh.position.set(20, 0.02, 252);
     scene.add(pitAsphaltMesh);
 
-    // Pit Wall with Sponsor Branding
     const pitWall = new THREE.Mesh(new THREE.BoxGeometry(160, 2.4, 1.6), new THREE.MeshStandardMaterial({ color: 0x475569 }));
     pitWall.position.set(20, 1.2, 238);
     scene.add(pitWall);
 
-    // Tapered Entry Strip (Branching off main straight near Turn 10)
     const entryTaper = new THREE.Mesh(new THREE.PlaneGeometry(40, 16), new THREE.MeshStandardMaterial({ color: 0x334155 }));
     entryTaper.rotation.x = -Math.PI / 2;
     entryTaper.rotation.z = -0.25;
     entryTaper.position.set(-70, 0.02, 236);
     scene.add(entryTaper);
 
-    // Tapered Exit Strip (Merging back into main straight)
     const exitTaper = new THREE.Mesh(new THREE.PlaneGeometry(40, 16), new THREE.MeshStandardMaterial({ color: 0x334155 }));
     exitTaper.rotation.x = -Math.PI / 2;
     exitTaper.rotation.z = 0.25;
     exitTaper.position.set(110, 0.02, 236);
     scene.add(exitTaper);
 
-    // Pit Box Orange Paint
     const pitBoxMesh = new THREE.Mesh(new THREE.PlaneGeometry(22, 12), new THREE.MeshBasicMaterial({ color: 0xea580c, side: THREE.DoubleSide }));
     pitBoxMesh.rotation.x = -Math.PI / 2;
     pitBoxMesh.position.set(40, 0.04, 252);
     scene.add(pitBoxMesh);
 
-    // Garages
     const garageColors = [0xef4444, 0x1e3a8a, 0x06b6d4, 0xf97316];
     for (let i = 0; i < 4; i++) {
         const gBuilding = new THREE.Mesh(new THREE.BoxGeometry(28, 7.0, 14), new THREE.MeshStandardMaterial({ color: garageColors[i] }));
@@ -754,6 +780,10 @@ let tireWear = 100.0;
 let cameraMode = 0;
 let activeAeroXMode = false;
 let weatherTrend = 'STABLE';
+
+// ERS & Key Tracking
+let ersBattery = 100.0;
+let isErsBoosting = false;
 let keys = {};
 
 let speed = 0;
@@ -772,7 +802,7 @@ let checkpointPassed = false;
 let isFinished = false;
 
 window.addEventListener('keydown', e => {
-    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","KeyW","KeyS","KeyA","KeyD","KeyC"].includes(e.code)) {
+    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","KeyW","KeyS","KeyA","KeyD","KeyC","ShiftLeft","ShiftRight","KeyE"].includes(e.code)) {
         e.preventDefault();
     }
     if (e.code === 'KeyC' && !e.repeat) {
@@ -828,23 +858,54 @@ function updatePhysics() {
     }
 
     const spec = TIRE_SPECS[currentTire];
-    
-    // Weather Hydroplaning Logic
+
+    // 🚀 SHIFT ERS BOOST MECHANICS
+    isErsBoosting = (keys['ShiftLeft'] || keys['ShiftRight'] || keys['KeyE']) && ersBattery > 0;
+    const ersMult = isErsBoosting ? 1.25 : 1.0;
+    if (isErsBoosting) {
+        ersBattery -= 0.40;
+        if (ersBattery < 0) ersBattery = 0;
+    } else if (ersBattery < 100) {
+        ersBattery += 0.10; // Recharge
+    }
+
+    // Weather Penalty Logic
     let weatherPenalty = 1.0;
     if (isRaining && !spec.wetOk) {
-        weatherPenalty = 0.35; // Slick tyres in rain lose 65% speed & grip!
+        weatherPenalty = 0.35;
     } else if (!isRaining && spec.wetOk) {
-        weatherPenalty = 0.80; // Wet tyres on dry track overheat/slow down
+        weatherPenalty = 0.80;
     }
 
     const aeroSpeedBoost = activeAeroXMode ? 1.14 : 0.96;
-    const maxSpeed = 0.98 * spec.speedMult * aeroSpeedBoost * weatherPenalty;
-    const gripFactor = 0.014 * spec.gripMult * weatherPenalty;
+    let maxSpeed = 0.98 * spec.speedMult * aeroSpeedBoost * ersMult * weatherPenalty;
 
+    // ⛔ OFF-TRACK DETECTION (70 KM/H STRICT SPEED LIMIT)
+    const carPos = playerObj.group.position;
+    const currentProgress = getTrackProgress(carPos);
+    const closestPoint = trackCurve.getPointAt(currentProgress % 1);
+
+    const distFromCenter = carPos.distanceTo(closestPoint);
+    const isOffTrack = (distFromCenter > ROAD_WIDTH / 2 + 1.2) && (carPos.z < 235);
+    const OFF_TRACK_MAX_SPEED = 70 / 310; // 70 km/h in world scale (approx 0.225)
+
+    if (isOffTrack) {
+        document.getElementById('offTrackWarning').style.display = 'block';
+        if (maxSpeed > OFF_TRACK_MAX_SPEED) {
+            maxSpeed = OFF_TRACK_MAX_SPEED;
+        }
+        if (speed > OFF_TRACK_MAX_SPEED) {
+            speed *= 0.92; // Rapid deceleration to 70 km/h
+        }
+    } else {
+        document.getElementById('offTrackWarning').style.display = 'none';
+    }
+
+    const gripFactor = 0.014 * spec.gripMult * weatherPenalty;
     const isAccel = (keys['ArrowUp'] || keys['KeyW']);
     const isBrake = (keys['ArrowDown'] || keys['KeyS']);
 
-    if (isAccel) speed += 0.008;
+    if (isAccel) speed += 0.008 * ersMult;
     else if (isBrake) speed -= 0.014;
     else speed *= 0.985;
 
@@ -855,16 +916,13 @@ function updatePhysics() {
 
     if (Math.abs(speed) > 0.02) {
         const dir = speed > 0 ? 1 : -1;
-        carAngle += steerSmooth * gripFactor * dir * (speed / maxSpeed);
+        carAngle += steerSmooth * gripFactor * dir * (speed / Math.max(0.1, maxSpeed));
     }
 
     if (Math.abs(speed) > 0.05) {
         tireWear -= spec.wearRate * (1 + Math.abs(steerSmooth) * 0.5) * 0.05;
         if (tireWear < 0) tireWear = 0;
     }
-
-    const carPos = playerObj.group.position;
-    const currentProgress = getTrackProgress(carPos);
 
     if (pitCooldown && (carPos.x > 80 || carPos.z < 235)) {
         pitCooldown = false;
@@ -876,13 +934,17 @@ function updatePhysics() {
 
     playerObj.wheels.forEach(w => w.rotation.x += speed * 0.5);
 
-    // Dynamic Camera System
+    // Dynamic Camera View & ERS Dynamic FOV (75deg on Boost)
+    const targetFov = (isErsBoosting || activeAeroXMode) ? 75 : 55;
+    camera.fov += (targetFov - camera.fov) * 0.1;
+    camera.updateProjectionMatrix();
+
     if (inPit || isPitChanging) {
         const pitCamPos = new THREE.Vector3(carPos.x - 4, 3.5, carPos.z + 10);
         camera.position.lerp(pitCamPos, 0.15);
         camera.lookAt(carPos.x, 1.2, carPos.z);
     } else {
-        if (cameraMode === 0) {
+        if (cameraMode === 0) { // Chase
             const camOffset = new THREE.Vector3(0, 5.5, -14).applyAxisAngle(new THREE.Vector3(0, 1, 0), carAngle);
             camera.position.lerp(carPos.clone().add(camOffset), 0.2);
             camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1.2, 0)));
@@ -890,7 +952,7 @@ function updatePhysics() {
             const tCamOffset = new THREE.Vector3(0, 1.55, -0.4).applyAxisAngle(new THREE.Vector3(0, 1, 0), carAngle);
             camera.position.copy(carPos.clone().add(tCamOffset));
             camera.lookAt(carPos.clone().add(new THREE.Vector3(Math.sin(carAngle)*20, 1.0, Math.cos(carAngle)*20)));
-        } else if (cameraMode === 2) { // Cockpit View
+        } else if (cameraMode === 2) { // Cockpit 1st Person
             const cCamOffset = new THREE.Vector3(0, 0.85, 0.1).applyAxisAngle(new THREE.Vector3(0, 1, 0), carAngle);
             camera.position.copy(carPos.clone().add(cCamOffset));
             camera.lookAt(carPos.clone().add(new THREE.Vector3(Math.sin(carAngle)*20, 0.85, Math.cos(carAngle)*20)));
@@ -917,7 +979,6 @@ function updatePhysics() {
         lapStartTime = now;
         playerLap++;
 
-        // Trigger Weather Changes and Team Radio Alerts!
         if (weatherTrend === 'DRY_TO_RAIN' && playerLap === 2 && !isRaining) {
             setWeatherState(true);
             playTeamRadio("Rain is falling heavily! Box now for WET tyres!");
@@ -934,7 +995,6 @@ function updatePhysics() {
         }
     }
 
-    // Rain Particles Animation
     if (isRaining) {
         const positions = rainPoints.geometry.attributes.position.array;
         for (let i = 1; i < rainCount * 3; i += 3) {
@@ -987,6 +1047,7 @@ function updateHUDTelemetry(speedKmh, isAccel, isBrake) {
 
     document.getElementById('thrBar').style.width = isAccel ? '100%' : '0%';
     document.getElementById('brkBar').style.width = isBrake ? '100%' : '0%';
+    document.getElementById('ersBar').style.width = `${ersBattery}%`;
     document.getElementById('wearVal').innerText = `${Math.round(tireWear)}%`;
 }
 
