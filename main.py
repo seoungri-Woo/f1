@@ -2,20 +2,18 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="EA SPORTS F1® 25 - Ultimate Edition",
+    page_title="EA SPORTS F1® 25 - Ultimate Circuit & Radio",
     page_icon="🏎️",
     layout="wide"
 )
 
-st.title("🏎️ EA SPORTS F1® 25: ULTIMATE 2026 SEASON PACK")
+st.title("🏎️ EA SPORTS F1® 25: 2026 ULTIMATE GRAND PRIX")
 st.markdown("""
-**[ULTIMATE EDITION 조작키 가이드]**
-- 🎥 **`[C]` 시점 전환:** `Chase View (3인칭)` ↔ `T-Cam (헬멧 위)` ↔ `Cockpit View (1인칭 Halo)`
-- 🔊 **`[클릭]` 사운드 활성화:** 화면 아무 곳이나 클릭하면 **Web Audio V6 엔진음 & 효과음**이 켜집니다.
-- ⚡ **`[Space]` 액티브 에어로:** `X-MODE` (직선 저항 감소) ↔ `Z-MODE` (코너링 다운포스)
-- 🚀 **`[Shift / E]` ERS 부스트:** 배터리 소비 고속 가속 (FOV 확산 연출)
-- 🌧️ **`[V]` 날씨 전환:** `Dry (☀️)` ↔ `Wet (🌧️ Rain)` (우천 시 INTERMEDIATE / WET 타이어 전용)
-- 🛑 **`[L]` 피트 리미터:** 80 km/h 속도 제한
+**[신규 업데이트 시스템 가이드]**
+- 🛡️ **3D 가드레일 & F1 스폰서 배너:** 서킷 외각에 금속 가드레일과 **ROLEX, PIRELLI, ARAMCO, DHL, HEINEKEN** 배너가 설치되어 1인칭 시야가 명확해집니다.
+- 🛣️ **리얼 3D 피트 레이인:** 트랙 진입로/탈출로가 부드럽게 입체 연결된 피트 차선을 이용할 수 있습니다.
+- 🌧️ **날씨 예보 & WET 타이어 역전:** 비가 내리면 🔵 **WET** 타이어가 가장 빠르며, 슬릭 타이어(Soft/Medium/Hard)는 미끄러집니다.
+- 📻 **F1 팀 라디오 (Team Radio):** 기상 변화 시 피트 엔지니어 무전 비프음과 자막(*"Rain approaching! Box for Wet tyres!"*)이 켜집니다.
 """)
 
 game_3d_html = """
@@ -66,7 +64,37 @@ game_3d_html = """
             margin-left: 4px;
         }
 
-        /* Steering Wheel & Tachometer Bottom HUD */
+        /* F1 Team Radio HUD Banner */
+        #teamRadioBanner {
+            display: none;
+            position: absolute;
+            top: 75px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid #22c55e;
+            padding: 10px 24px;
+            border-radius: 30px;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.6);
+            z-index: 25;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .radio-pulse {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 10px #22c55e;
+            animation: pulseRadio 0.8s infinite alternate;
+        }
+        @keyframes pulseRadio { 0% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        /* Steering Wheel Bottom HUD */
         .hud-bottom {
             position: absolute;
             bottom: 15px;
@@ -123,12 +151,7 @@ game_3d_html = """
         .speed-num { font-size: 28px; font-weight: 900; color: #ffffff; line-height: 1; }
         .speed-unit { font-size: 10px; color: #64748b; font-weight: 700; }
 
-        .aero-badge {
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-weight: 900;
-            font-size: 12px;
-        }
+        .aero-badge { padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 12px; }
         .mode-z { background: #0284c7; color: white; }
         .mode-x { background: #e11d48; color: white; animation: pulse 0.8s infinite alternate; }
 
@@ -139,7 +162,6 @@ game_3d_html = """
         .fill-brake { background: #ef4444; }
         .fill-ers { background: #3b82f6; }
 
-        /* Warning Overlays (Damage / Puncture / Audio Notice) */
         #audioNotice {
             position: absolute;
             top: 15px;
@@ -154,87 +176,26 @@ game_3d_html = """
             cursor: pointer;
         }
 
-        #warningBanner {
-            display: none;
-            position: absolute;
-            top: 120px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(220, 38, 38, 0.95);
-            color: white;
-            padding: 8px 24px;
-            border-radius: 20px;
-            font-weight: 900;
-            font-size: 16px;
-            box-shadow: 0 0 25px rgba(220, 38, 38, 0.8);
-            z-index: 25;
-            animation: blink 0.6s infinite alternate;
-        }
-        @keyframes blink { 0% { opacity: 0.3; } 100% { opacity: 1; } }
-
-        /* Pit Light Banner */
-        #pitLightBanner {
-            display: none;
-            position: absolute;
-            top: 75px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.95);
-            border: 2px solid #ea580c;
-            padding: 8px 20px;
-            border-radius: 30px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            box-shadow: 0 0 30px rgba(234, 88, 12, 0.6);
-            z-index: 20;
-        }
-        .pit-light-dot { width: 18px; height: 18px; border-radius: 50%; background: #333; }
-        .pit-light-red { background: #ff0000; box-shadow: 0 0 15px #ff0000; }
-        .pit-light-green { background: #00ff00; box-shadow: 0 0 20px #00ff00; }
-
-        /* F1 Start Lights Overlay */
-        #startLightOverlay {
-            display: none;
-            position: absolute;
-            top: 70px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(10, 10, 10, 0.95);
-            border: 3px solid #333;
-            padding: 12px 25px;
-            border-radius: 15px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            box-shadow: 0 0 30px rgba(0,0,0,0.9);
-            z-index: 30;
-        }
-        .light-box { display: flex; gap: 12px; margin-top: 5px; }
-        .light-bulb { width: 26px; height: 26px; border-radius: 50%; background-color: #333; border: 2px solid #111; }
-        .light-red { background-color: #ff0000 !important; box-shadow: 0 0 18px #ff0000, inset 0 0 5px #fff !important; }
-        .light-green { background-color: #00ff00 !important; box-shadow: 0 0 25px #00ff00, inset 0 0 5px #fff !important; }
-
         /* Setup Modal */
         #startModal {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(15, 23, 42, 0.96);
+            background: rgba(15, 23, 42, 0.97);
             border: 2px solid #ffcc00;
             padding: 25px 35px;
             border-radius: 16px;
             text-align: center;
-            width: 380px;
+            width: 420px;
             box-shadow: 0 0 50px rgba(255, 204, 0, 0.4);
             z-index: 50;
             color: white;
         }
         #startModal h2 { color: #ffcc00; margin-top: 0; }
-        .setting-group { margin: 15px 0; text-align: left; }
-        .setting-group label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #cbd5e1; }
-        select { width: 100%; padding: 8px 12px; background: #1e293b; color: white; border: 1px solid #475569; border-radius: 8px; font-size: 14px; font-weight: bold; }
+        .setting-group { margin: 12px 0; text-align: left; }
+        .setting-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 4px; color: #cbd5e1; }
+        select { width: 100%; padding: 8px 12px; background: #1e293b; color: white; border: 1px solid #475569; border-radius: 8px; font-size: 13px; font-weight: bold; }
         .btn-start { background: #ffcc00; color: #000; border: none; padding: 12px 30px; font-size: 17px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 15px; width: 100%; transition: transform 0.2s; }
         .btn-start:hover { transform: scale(1.03); background: #ffd633; }
 
@@ -285,30 +246,24 @@ game_3d_html = """
 <body>
 
     <div id="canvas-container">
-        <!-- Audio Notice -->
-        <div id="audioNotice" onclick="initAudio()">🔊 클릭하여 사운드 활성화</div>
+        <div id="audioNotice" onclick="initAudio()">🔊 클릭하여 사운드/무전 활성화</div>
 
-        <!-- Warning Overlay Banner -->
-        <div id="warningBanner">🚨 TIRE PUNCTURE! PIT IMMEDIATELY! 🚨</div>
+        <!-- F1 Team Radio HUD Banner -->
+        <div id="teamRadioBanner">
+            <div class="radio-pulse"></div>
+            <span id="radioText">📻 TEAM RADIO: "Radio Check, Loud and Clear."</span>
+        </div>
 
-        <!-- Top Broadcast Telemetry HUD -->
+        <!-- Top Telemetry HUD -->
         <div class="hud-top">
             <div class="hud-item">POS <span id="posVal" class="hud-value" style="color:#38bdf8;">P2 / 4</span></div>
             <div class="hud-item">LAP <span id="lapVal" class="hud-value">1 / 5</span></div>
             <div class="hud-item">CAM <span id="camVal" class="hud-value" style="color:#a855f7;">CHASE</span></div>
             <div class="hud-item">WEATHER <span id="weatherVal" class="hud-value" style="color:#38bdf8;">DRY ☀️</span></div>
-            <div class="hud-item">DAMAGE <span id="damageVal" class="hud-value" style="color:#22c55e;">0%</span></div>
             <div class="hud-item">TYRE <span id="tireBadge" class="hud-value" style="color:#eab308;">MEDIUM</span> <span id="wearVal" class="hud-value">100%</span></div>
         </div>
 
-        <!-- Pit Release Traffic Light Banner -->
-        <div id="pitLightBanner">
-            <div class="pit-light-dot" id="pitRedLight"></div>
-            <span id="pitStatusText" style="font-weight:bold; font-size:14px;">PIT CREW CHANGING TIRES...</span>
-            <div class="pit-light-dot" id="pitGreenLight"></div>
-        </div>
-
-        <!-- Steering Wheel / Tachometer Bottom HUD -->
+        <!-- Steering Wheel Bottom HUD -->
         <div class="hud-bottom">
             <div class="rpm-bar">
                 <div class="rpm-led led-green" id="led0"></div>
@@ -339,19 +294,6 @@ game_3d_html = """
             </div>
         </div>
 
-        <!-- F1 Lights Out Display Panel -->
-        <div id="startLightOverlay">
-            <span style="font-size:12px; font-weight:bold; color:#aaa; letter-spacing:1px;">EA SPORTS F1® LIGHTS OUT</span>
-            <div class="light-box">
-                <div class="light-bulb" id="light1"></div>
-                <div class="light-bulb" id="light2"></div>
-                <div class="light-bulb" id="light3"></div>
-                <div class="light-bulb" id="light4"></div>
-                <div class="light-bulb" id="light5"></div>
-            </div>
-            <span id="lightText" style="font-size:13px; font-weight:bold; color:#ffcc00; margin-top:4px;">FORMATION LAP COMPLETE</span>
-        </div>
-
         <!-- Setup Game Modal -->
         <div id="startModal">
             <h2>🏎️ F1® 25 ULTIMATE 설정</h2>
@@ -364,6 +306,21 @@ game_3d_html = """
                 </select>
             </div>
             <div class="setting-group">
+                <label>☀️ 시작 날씨 선택</label>
+                <select id="selectInitialWeather">
+                    <option value="DRY" selected>☀️ Dry (맑음)</option>
+                    <option value="RAIN">🌧️ Wet (우천/비)</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label>🔮 미래 날씨 변화 예보 (Forecast)</label>
+                <select id="selectWeatherTrend">
+                    <option value="STABLE" selected>🔒 날씨 변화 없음 (고정)</option>
+                    <option value="DRY_TO_RAIN">🌧️ 맑다가 비 옴 (2~3 Lap 비예보)</option>
+                    <option value="RAIN_TO_DRY">☀️ 비 오다가 맑아짐 (2~3 Lap 건조)</option>
+                </select>
+            </div>
+            <div class="setting-group">
                 <label>🛞 스타트 타이어 선택</label>
                 <select id="selectTire">
                     <option value="SOFT">🔴 Soft (슬릭 Dry)</option>
@@ -373,13 +330,13 @@ game_3d_html = """
                     <option value="WET">🔵 Full Wet (폭우 Rain)</option>
                 </select>
             </div>
-            <button class="btn-start" onclick="initGame()">2026 ULTIMATE START</button>
+            <button class="btn-start" onclick="initGame()">2026 RACE START</button>
         </div>
 
         <!-- Pit Stop Interactive Modal -->
         <div id="pitModal">
-            <h3>⛽ F1 PIT STOP & 파츠 수리</h3>
-            <p style="font-size:12px; margin-bottom:10px;">교체할 컴파운드 선택 (파손 부위 자동 수리됨):</p>
+            <h3>⛽ F1 PIT STOP 타이어 교체</h3>
+            <p style="font-size:12px; margin-bottom:10px;">노면 상태에 적합한 컴파운드를 선택하세요:</p>
             <button class="btn-compound" style="background:#e63946; color:white;" onclick="changeTire('SOFT')">🔴 SOFT</button>
             <button class="btn-compound" style="background:#eab308; color:black;" onclick="changeTire('MEDIUM')">🟡 MEDIUM</button>
             <button class="btn-compound" style="background:#94a3b8; color:black;" onclick="changeTire('HARD')">⚪ HARD</button><br>
@@ -399,7 +356,7 @@ game_3d_html = """
     </div>
 
 <script>
-// --- Web Audio API Realtime Synthesizer ---
+// --- Web Audio API & Team Radio Synthesizer ---
 let audioCtx = null;
 let engineOsc = null;
 let engineGain = null;
@@ -418,7 +375,8 @@ function initAudio() {
         engineOsc.connect(engineGain);
         engineGain.connect(audioCtx.destination);
         engineOsc.start();
-        document.getElementById('audioNotice').innerText = '🔊 Audio Active';
+        document.getElementById('audioNotice').innerText = '🔊 Audio & Radio Active';
+        playTeamRadio("Radio check. Engine parameters nominal.");
     } catch(e) { console.log(e); }
 }
 window.addEventListener('click', initAudio);
@@ -429,34 +387,54 @@ function updateAudioEngine(speedKmh) {
     engineOsc.frequency.setTargetAtTime(rpmPitch, audioCtx.currentTime, 0.05);
 }
 
-function playBeepSound(freq, duration) {
-    if (!audioCtx) return;
-    const osc = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    osc.frequency.value = freq;
-    g.gain.value = 0.1;
-    osc.connect(g);
-    g.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + duration);
+function playTeamRadio(msg) {
+    const banner = document.getElementById('teamRadioBanner');
+    const txt = document.getElementById('radioText');
+    txt.innerText = `📻 TEAM RADIO: "${msg}"`;
+    banner.style.display = 'flex';
+
+    if (audioCtx) {
+        // Radio static sound effect
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = 650;
+        g.gain.value = 0.06;
+        osc.connect(g);
+        g.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.25);
+    }
+
+    setTimeout(() => { banner.style.display = 'none'; }, 4500);
 }
 
-function playImpactWrenchSFX() {
-    if (!audioCtx) return;
-    for(let i=0; i<3; i++) {
-        setTimeout(() => {
-            const osc = audioCtx.createOscillator();
-            const g = audioCtx.createGain();
-            osc.type = 'square';
-            osc.frequency.value = 400 + Math.random() * 300;
-            g.gain.value = 0.08;
-            osc.connect(g);
-            g.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.12);
-        }, i * 160);
-    }
+// --- Dynamic Canvas Sponsor Banners (ROLEX, PIRELLI, ARAMCO, DHL, HEINEKEN) ---
+function createSponsorTexture(text, bgColor, textColor) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, 512, 128);
+
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 52px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 256, 64);
+
+    return new THREE.CanvasTexture(canvas);
 }
+
+const sponsorTextures = [
+    createSponsorTexture('ROLEX', '#006039', '#eab308'),
+    createSponsorTexture('PIRELLI', '#eab308', '#dc2626'),
+    createSponsorTexture('ARAMCO', '#00a389', '#ffffff'),
+    createSponsorTexture('DHL', '#ffcc00', '#d97706'),
+    createSponsorTexture('HEINEKEN', '#008234', '#ffffff')
+];
 
 // --- Three.js Setup ---
 const container = document.getElementById('canvas-container');
@@ -472,26 +450,23 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 container.appendChild(renderer.domElement);
 
 // Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
 scene.add(ambientLight);
 
 const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
 dirLight.position.set(250, 400, 150);
 dirLight.castShadow = true;
-dirLight.shadow.mapSize.width = 2048;
-dirLight.shadow.mapSize.height = 2048;
 scene.add(dirLight);
 
-// Grass Plane
+// Ground Grass
 const grassGeo = new THREE.PlaneGeometry(3500, 3500);
 const grassMat = new THREE.MeshLambertMaterial({ color: 0x1c421e });
 const grass = new THREE.Mesh(grassGeo, grassMat);
 grass.rotation.x = -Math.PI / 2;
 grass.position.y = -0.05;
-grass.receiveShadow = true;
 scene.add(grass);
 
-// --- 2026 Track Geometry ---
+// --- 3D Track & Guardrails & Sponsor Banners ---
 const trackPoints = [
     new THREE.Vector3(-250, 0, 220),
     new THREE.Vector3(250, 0, 220),
@@ -510,10 +485,12 @@ const SEGMENTS = 450;
 const ROAD_WIDTH = 34;
 let roadMaterial;
 
-function build3DTrack() {
+function build3DTrackAndGuardrails() {
     const points = trackCurve.getSpacedPoints(SEGMENTS);
     const roadVertices = [], roadIndices = [];
     const kerbVertices = [], kerbColors = [], kerbIndices = [];
+
+    const guardrailMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.9, roughness: 0.2 });
 
     for (let i = 0; i <= SEGMENTS; i++) {
         const p1 = points[i % SEGMENTS];
@@ -534,6 +511,7 @@ function build3DTrack() {
             roadIndices.push(r1 + 1, r2 + 1, r2);
         }
 
+        // Kerbs
         const lKerbOuter = new THREE.Vector3().addVectors(p1, norm.clone().multiplyScalar(ROAD_WIDTH / 2 + 3.2));
         const rKerbOuter = new THREE.Vector3().addVectors(p1, norm.clone().multiplyScalar(-ROAD_WIDTH / 2 - 3.2));
         const color = (Math.floor(i / 2) % 2 === 0) ? [0.9, 0.1, 0.1] : [0.95, 0.95, 0.95];
@@ -547,6 +525,28 @@ function build3DTrack() {
             const k1 = i * 4, k2 = (i + 1) * 4;
             kerbIndices.push(k1, k1 + 1, k2, k1 + 1, k2 + 1, k2);
             kerbIndices.push(k1 + 2, k1 + 3, k2 + 2, k1 + 3, k2 + 3, k2 + 2);
+        }
+
+        // 3D Metallic Guardrails & Sponsor Banners (Every 6 segments)
+        if (i % 6 === 0) {
+            // Outer Guardrail Rail
+            const gPos = p1.clone().add(norm.clone().multiplyScalar(ROAD_WIDTH / 2 + 5.0));
+            const guardRail = new THREE.Mesh(new THREE.BoxGeometry(6.5, 1.2, 0.3), guardrailMat);
+            guardRail.position.set(gPos.x, 1.2, gPos.z);
+            guardRail.rotation.y = Math.atan2(dir.x, dir.z);
+            scene.add(guardRail);
+
+            // Sponsor Banner (Every 18 segments)
+            if (i % 18 === 0) {
+                const sponsorTex = sponsorTextures[(i / 18) % sponsorTextures.length];
+                const bannerMesh = new THREE.Mesh(
+                    new THREE.PlaneGeometry(8.0, 2.0),
+                    new THREE.MeshBasicMaterial({ map: sponsorTex, side: THREE.DoubleSide })
+                );
+                bannerMesh.position.set(gPos.x, 2.2, gPos.z);
+                bannerMesh.rotation.y = Math.atan2(dir.x, dir.z);
+                scene.add(bannerMesh);
+            }
         }
     }
 
@@ -566,9 +566,54 @@ function build3DTrack() {
     kerbGeo.setIndex(kerbIndices);
     scene.add(new THREE.Mesh(kerbGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide })));
 }
-build3DTrack();
+build3DTrackAndGuardrails();
 
-// Rain Weather System Particles
+// --- Real 3D Pit Lane Geometry (Tapered Entry & Exit Parallel Ribbon) ---
+function buildRealisticPitLane() {
+    const pitAsphaltMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(160, 22),
+        new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 })
+    );
+    pitAsphaltMesh.rotation.x = -Math.PI / 2;
+    pitAsphaltMesh.position.set(20, 0.02, 252);
+    scene.add(pitAsphaltMesh);
+
+    // Pit Wall with Sponsor Branding
+    const pitWall = new THREE.Mesh(new THREE.BoxGeometry(160, 2.4, 1.6), new THREE.MeshStandardMaterial({ color: 0x475569 }));
+    pitWall.position.set(20, 1.2, 238);
+    scene.add(pitWall);
+
+    // Tapered Entry Strip (Branching off main straight near Turn 10)
+    const entryTaper = new THREE.Mesh(new THREE.PlaneGeometry(40, 16), new THREE.MeshStandardMaterial({ color: 0x334155 }));
+    entryTaper.rotation.x = -Math.PI / 2;
+    entryTaper.rotation.z = -0.25;
+    entryTaper.position.set(-70, 0.02, 236);
+    scene.add(entryTaper);
+
+    // Tapered Exit Strip (Merging back into main straight)
+    const exitTaper = new THREE.Mesh(new THREE.PlaneGeometry(40, 16), new THREE.MeshStandardMaterial({ color: 0x334155 }));
+    exitTaper.rotation.x = -Math.PI / 2;
+    exitTaper.rotation.z = 0.25;
+    exitTaper.position.set(110, 0.02, 236);
+    scene.add(exitTaper);
+
+    // Pit Box Orange Paint
+    const pitBoxMesh = new THREE.Mesh(new THREE.PlaneGeometry(22, 12), new THREE.MeshBasicMaterial({ color: 0xea580c, side: THREE.DoubleSide }));
+    pitBoxMesh.rotation.x = -Math.PI / 2;
+    pitBoxMesh.position.set(40, 0.04, 252);
+    scene.add(pitBoxMesh);
+
+    // Garages
+    const garageColors = [0xef4444, 0x1e3a8a, 0x06b6d4, 0xf97316];
+    for (let i = 0; i < 4; i++) {
+        const gBuilding = new THREE.Mesh(new THREE.BoxGeometry(28, 7.0, 14), new THREE.MeshStandardMaterial({ color: garageColors[i] }));
+        gBuilding.position.set(-30 + i * 32, 3.5, 268);
+        scene.add(gBuilding);
+    }
+}
+buildRealisticPitLane();
+
+// Weather System Particles
 const rainGeo = new THREE.BufferGeometry();
 const rainCount = 1800;
 const rainPos = new Float32Array(rainCount * 3);
@@ -578,14 +623,13 @@ for(let i=0; i<rainCount*3; i+=3) {
     rainPos[i+2] = (Math.random() - 0.5) * 800;
 }
 rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-const rainMat = new THREE.PointsMaterial({ color: 0xaaaaee, size: 0.6, transparent: true, opacity: 0.7 });
-const rainPoints = new THREE.Points(rainGeo, rainMat);
+const rainPoints = new THREE.Points(rainGeo, new THREE.PointsMaterial({ color: 0xaaaaee, size: 0.6, transparent: true, opacity: 0.7 }));
 rainPoints.visible = false;
 scene.add(rainPoints);
 
 let isRaining = false;
-function toggleWeather() {
-    isRaining = !isRaining;
+function setWeatherState(rainBool) {
+    isRaining = rainBool;
     rainPoints.visible = isRaining;
     const wBadge = document.getElementById('weatherVal');
     if (isRaining) {
@@ -605,31 +649,7 @@ function toggleWeather() {
     }
 }
 
-// Grandstand & Pit Lane
-function buildGrandstand() {
-    const standGroup = new THREE.Group();
-    standGroup.position.set(0, 0, 160);
-    const tier = new THREE.Mesh(new THREE.BoxGeometry(260, 12, 26), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
-    tier.position.set(0, 6, 0);
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(270, 1.5, 38), new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.6 }));
-    roof.position.set(0, 18, 4);
-    roof.rotation.x = 0.08;
-    standGroup.add(tier, roof);
-    scene.add(standGroup);
-}
-buildGrandstand();
-
-const pitGroup = new THREE.Group();
-const pitWall = new THREE.Mesh(new THREE.BoxGeometry(160, 2.4, 1.6), new THREE.MeshStandardMaterial({ color: 0x475569 }));
-pitWall.position.set(20, 1.2, 238);
-pitGroup.add(pitWall);
-const pitAsphalt = new THREE.Mesh(new THREE.PlaneGeometry(160, 24), new THREE.MeshStandardMaterial({ color: 0x334155 }));
-pitAsphalt.rotation.x = -Math.PI / 2;
-pitAsphalt.position.set(20, 0.02, 252);
-pitGroup.add(pitAsphalt);
-scene.add(pitGroup);
-
-// --- 3D Pit Crew Members ---
+// 3D Pit Crew Members
 function createPitCrewMember() {
     const crewGroup = new THREE.Group();
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.3, 8), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
@@ -653,10 +673,9 @@ pitCrewMembers.forEach((member, i) => {
     scene.add(member);
 });
 
-// --- High-Detail 2026 F1 Machine with Rain Light & Active Aero ---
+// F1 Car Mesh
 function create3DCar(colorHex, rWingColorHex) {
     const carGroup = new THREE.Group();
-
     const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.6, 5.4), new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2, metalness: 0.6 }));
     body.position.y = 0.55;
     carGroup.add(body);
@@ -666,8 +685,7 @@ function create3DCar(colorHex, rWingColorHex) {
     haloRing.position.set(0, 0.95, 0.3);
     carGroup.add(haloRing);
 
-    const fWingMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-    const fWing = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.1, 1.0), fWingMat);
+    const fWing = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.1, 1.0), new THREE.MeshStandardMaterial({ color: 0x111111 }));
     fWing.position.set(0, 0.3, 2.7);
     carGroup.add(fWing);
 
@@ -675,16 +693,10 @@ function create3DCar(colorHex, rWingColorHex) {
     rearWingGroup.position.set(0, 1.15, -2.5);
     const rWingMain = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.12, 1.0), new THREE.MeshStandardMaterial({ color: rWingColorHex }));
     rearWingGroup.add(rWingMain);
-
     const activeFlap = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.06, 0.45), new THREE.MeshStandardMaterial({ color: 0xffffff }));
     activeFlap.position.set(0, 0.15, 0.1);
     rearWingGroup.add(activeFlap);
     carGroup.add(rearWingGroup);
-
-    // Rear LED Rain Light Mesh
-    const rainLightMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.1), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
-    rainLightMesh.position.set(0, 0.4, -2.7);
-    carGroup.add(rainLightMesh);
 
     const wheelGeo = new THREE.CylinderGeometry(0.6, 0.6, 0.5, 24);
     wheelGeo.rotateZ(Math.PI / 2);
@@ -701,7 +713,7 @@ function create3DCar(colorHex, rWingColorHex) {
         wheels.push(wheelMesh);
     });
 
-    return { group: carGroup, activeFlap, fWing, rainLightMesh, wheels, wheelMat };
+    return { group: carGroup, activeFlap, wheels, wheelMat };
 }
 
 const playerObj = create3DCar(0xef4444, 0xffcc00);
@@ -728,22 +740,20 @@ function alignGridPositions() {
 }
 alignGridPositions();
 
-// Tyre Specs (Wet Tyres Included)
+// Tyre Mechanics Physics
 const TIRE_SPECS = {
     'SOFT': { speedMult: 1.08, gripMult: 1.25, wearRate: 0.28, wetOk: false, wheelColor: 0xe63946 },
     'MEDIUM': { speedMult: 1.00, gripMult: 1.00, wearRate: 0.14, wetOk: false, wheelColor: 0xeab308 },
     'HARD': { speedMult: 0.94, gripMult: 0.82, wearRate: 0.06, wetOk: false, wheelColor: 0x94a3b8 },
     'INTERMEDIATE': { speedMult: 0.96, gripMult: 1.15, wearRate: 0.12, wetOk: true, wheelColor: 0x10b981 },
-    'WET': { speedMult: 0.90, gripMult: 1.30, wearRate: 0.08, wetOk: true, wheelColor: 0x3b82f6 }
+    'WET': { speedMult: 0.92, gripMult: 1.35, wearRate: 0.08, wetOk: true, wheelColor: 0x3b82f6 }
 };
 
 let currentTire = 'MEDIUM';
 let tireWear = 100.0;
-let carDamage = 0.0; // Damage percentage (0~100)
-let cameraMode = 0; // 0: Chase, 1: T-Cam, 2: Cockpit
+let cameraMode = 0;
 let activeAeroXMode = false;
-let ersBattery = 100.0;
-let isErsBoosting = false;
+let weatherTrend = 'STABLE';
 let keys = {};
 
 let speed = 0;
@@ -752,7 +762,6 @@ let steerSmooth = 0;
 let inPit = false;
 let isPitChanging = false;
 let pitCooldown = false;
-let pitLimiter = false;
 
 let startState = 'WAITING';
 let maxLaps = 5;
@@ -763,20 +772,14 @@ let checkpointPassed = false;
 let isFinished = false;
 
 window.addEventListener('keydown', e => {
-    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","KeyW","KeyS","KeyA","KeyD","KeyE","ShiftLeft","KeyL","KeyC","KeyV"].includes(e.code)) {
+    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","KeyW","KeyS","KeyA","KeyD","KeyC"].includes(e.code)) {
         e.preventDefault();
     }
-    // [C] Camera Switch
     if (e.code === 'KeyC' && !e.repeat) {
         cameraMode = (cameraMode + 1) % 3;
         const camNames = ['CHASE', 'T-CAM', 'COCKPIT'];
         document.getElementById('camVal').innerText = camNames[cameraMode];
     }
-    // [V] Weather Switch
-    if (e.code === 'KeyV' && !e.repeat) {
-        toggleWeather();
-    }
-    // [Space] Active Aero
     if (e.code === 'Space' && !e.repeat && startState === 'GO' && !isFinished && !inPit) {
         activeAeroXMode = !activeAeroXMode;
         const badge = document.getElementById('aeroBadge');
@@ -790,48 +793,23 @@ window.addEventListener('keydown', e => {
             playerObj.activeFlap.rotation.x = 0;
         }
     }
-    if (e.code === 'KeyL' && !e.repeat) pitLimiter = !pitLimiter;
     keys[e.code] = true;
 });
 window.addEventListener('keyup', e => keys[e.code] = false);
 
 function initGame() {
     maxLaps = parseInt(document.getElementById('selectLaps').value);
+    const initialWeather = document.getElementById('selectInitialWeather').value;
+    weatherTrend = document.getElementById('selectWeatherTrend').value;
     currentTire = document.getElementById('selectTire').value;
+
+    setWeatherState(initialWeather === 'RAIN');
     updateTireUI();
 
     document.getElementById('startModal').style.display = 'none';
-    document.getElementById('startLightOverlay').style.display = 'flex';
     document.getElementById('lapVal').innerText = `1 / ${maxLaps}`;
-
-    startState = 'COUNTDOWN';
-    runStartLightsSequence();
-}
-
-function runStartLightsSequence() {
-    let lightStep = 1;
-    document.getElementById('lightText').innerText = 'GET READY...';
-    const interval = setInterval(() => {
-        if (lightStep <= 5) {
-            document.getElementById(`light${lightStep}`).classList.add('light-red');
-            playBeepSound(440, 0.2);
-            lightStep++;
-        } else {
-            clearInterval(interval);
-            const randomDelay = 800 + Math.random() * 1200;
-            setTimeout(() => {
-                for (let i = 1; i <= 5; i++) {
-                    document.getElementById(`light${i}`).classList.remove('light-red');
-                    document.getElementById(`light${i}`).classList.add('light-green');
-                }
-                playBeepSound(880, 0.4);
-                document.getElementById('lightText').innerText = 'LIGHTS OUT & AWAY WE GO!';
-                startState = 'GO';
-                lapStartTime = Date.now();
-                setTimeout(() => { document.getElementById('startLightOverlay').style.display = 'none'; }, 2500);
-            }, randomDelay);
-        }
-    }, 1000);
+    startState = 'GO';
+    lapStartTime = Date.now();
 }
 
 function updateTireUI() {
@@ -851,48 +829,28 @@ function updatePhysics() {
 
     const spec = TIRE_SPECS[currentTire];
     
-    // Hydroplaning Penalty if using Dry tyres in Rain
-    const weatherPenalty = (isRaining && !spec.wetOk) ? 0.40 : 1.0;
-    const damagePenalty = 1.0 - (carDamage / 100) * 0.35;
-    const isPunctured = tireWear <= 0;
-    const puncturePenalty = isPunctured ? 0.25 : 1.0;
-
-    if (isPunctured) {
-        document.getElementById('warningBanner').style.display = 'block';
-    } else {
-        document.getElementById('warningBanner').style.display = 'none';
+    // Weather Hydroplaning Logic
+    let weatherPenalty = 1.0;
+    if (isRaining && !spec.wetOk) {
+        weatherPenalty = 0.35; // Slick tyres in rain lose 65% speed & grip!
+    } else if (!isRaining && spec.wetOk) {
+        weatherPenalty = 0.80; // Wet tyres on dry track overheat/slow down
     }
 
     const aeroSpeedBoost = activeAeroXMode ? 1.14 : 0.96;
-    const aeroGripMult = activeAeroXMode ? 0.75 : 1.25;
-
-    isErsBoosting = (keys['ShiftLeft'] || keys['KeyE']) && ersBattery > 0;
-    const ersMult = isErsBoosting ? 1.20 : 1.0;
-    if (isErsBoosting) {
-        ersBattery -= 0.35;
-        if (ersBattery < 0) ersBattery = 0;
-    } else if (ersBattery < 100) {
-        ersBattery += 0.08;
-    }
-
-    let maxSpeed = 0.98 * spec.speedMult * aeroSpeedBoost * ersMult * weatherPenalty * damagePenalty * puncturePenalty;
-    if (pitLimiter) maxSpeed = 0.30;
-
-    const gripFactor = 0.014 * spec.gripMult * aeroGripMult * weatherPenalty * damagePenalty;
+    const maxSpeed = 0.98 * spec.speedMult * aeroSpeedBoost * weatherPenalty;
+    const gripFactor = 0.014 * spec.gripMult * weatherPenalty;
 
     const isAccel = (keys['ArrowUp'] || keys['KeyW']);
     const isBrake = (keys['ArrowDown'] || keys['KeyS']);
 
-    if (isAccel) speed += 0.008 * ersMult;
+    if (isAccel) speed += 0.008;
     else if (isBrake) speed -= 0.014;
     else speed *= 0.985;
 
     if (speed > maxSpeed) speed = maxSpeed;
-    if (speed < -maxSpeed * 0.3) speed = -maxSpeed * 0.3;
 
-    let steerTarget = (keys['ArrowLeft'] || keys['KeyA']) ? 1 : ((keys['ArrowRight'] || keys['KeyD']) ? -1 : 0);
-    if (isPunctured) steerTarget += (Math.random() - 0.5) * 1.5; // Steering wobble
-
+    const steerTarget = (keys['ArrowLeft'] || keys['KeyA']) ? 1 : ((keys['ArrowRight'] || keys['KeyD']) ? -1 : 0);
     steerSmooth += (steerTarget - steerSmooth) * 0.1;
 
     if (Math.abs(speed) > 0.02) {
@@ -907,18 +865,6 @@ function updatePhysics() {
 
     const carPos = playerObj.group.position;
     const currentProgress = getTrackProgress(carPos);
-    const closestPoint = trackCurve.getPointAt(currentProgress % 1);
-    
-    // Check Grass Wall Collision Damage
-    if (carPos.distanceTo(closestPoint) > ROAD_WIDTH / 2 + 1 && carPos.z < 238) {
-        speed *= 0.88;
-        if (Math.abs(speed) > 0.3) {
-            carDamage = Math.min(100, carDamage + 0.15);
-            playerObj.fWing.rotation.z = (carDamage / 100) * 0.2; // Front wing tilt on damage
-            document.getElementById('damageVal').innerText = `${Math.round(carDamage)}%`;
-            document.getElementById('damageVal').style.color = carDamage > 40 ? '#ef4444' : '#22c55e';
-        }
-    }
 
     if (pitCooldown && (carPos.x > 80 || carPos.z < 235)) {
         pitCooldown = false;
@@ -930,34 +876,24 @@ function updatePhysics() {
 
     playerObj.wheels.forEach(w => w.rotation.x += speed * 0.5);
 
-    // Dynamic Rain Light Flashing
-    const flash = (Math.floor(Date.now() / 250) % 2 === 0);
-    playerObj.rainLightMesh.material.color.setHex((isRaining || isErsBoosting || inPit) && flash ? 0xff0000 : 0x330000);
-
-    // --- Dynamic Multi-Camera Views & FOV Adjustment ---
-    const targetFov = (isErsBoosting || activeAeroXMode) ? 72 : 55;
-    camera.fov += (targetFov - camera.fov) * 0.1;
-    camera.updateProjectionMatrix();
-
+    // Dynamic Camera System
     if (inPit || isPitChanging) {
         const pitCamPos = new THREE.Vector3(carPos.x - 4, 3.5, carPos.z + 10);
         camera.position.lerp(pitCamPos, 0.15);
         camera.lookAt(carPos.x, 1.2, carPos.z);
     } else {
-        if (cameraMode === 0) { // Chase 3rd Person
+        if (cameraMode === 0) {
             const camOffset = new THREE.Vector3(0, 5.5, -14).applyAxisAngle(new THREE.Vector3(0, 1, 0), carAngle);
             camera.position.lerp(carPos.clone().add(camOffset), 0.2);
             camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 1.2, 0)));
-        } else if (cameraMode === 1) { // T-Cam (Above Helmet)
+        } else if (cameraMode === 1) { // T-Cam
             const tCamOffset = new THREE.Vector3(0, 1.55, -0.4).applyAxisAngle(new THREE.Vector3(0, 1, 0), carAngle);
             camera.position.copy(carPos.clone().add(tCamOffset));
-            const lookTarget = carPos.clone().add(new THREE.Vector3(Math.sin(carAngle)*20, 1.0, Math.cos(carAngle)*20));
-            camera.lookAt(lookTarget);
-        } else if (cameraMode === 2) { // Cockpit 1st Person
+            camera.lookAt(carPos.clone().add(new THREE.Vector3(Math.sin(carAngle)*20, 1.0, Math.cos(carAngle)*20)));
+        } else if (cameraMode === 2) { // Cockpit View
             const cCamOffset = new THREE.Vector3(0, 0.85, 0.1).applyAxisAngle(new THREE.Vector3(0, 1, 0), carAngle);
             camera.position.copy(carPos.clone().add(cCamOffset));
-            const lookTarget = carPos.clone().add(new THREE.Vector3(Math.sin(carAngle)*20, 0.85, Math.cos(carAngle)*20));
-            camera.lookAt(lookTarget);
+            camera.lookAt(carPos.clone().add(new THREE.Vector3(Math.sin(carAngle)*20, 0.85, Math.cos(carAngle)*20)));
         }
     }
 
@@ -973,13 +909,22 @@ function updatePhysics() {
 
     if (carPos.z < -180) checkpointPassed = true;
 
+    // Lap Completion & Weather Forecast Progression Trigger
     if (checkpointPassed && Math.abs(carPos.x) < 25 && carPos.z > 215 && carPos.z < 235) {
         const now = Date.now();
-        const lapTime = (now - lapStartTime) / 1000;
-        lapTimes.push(lapTime);
+        lapTimes.push((now - lapStartTime) / 1000);
         checkpointPassed = false;
         lapStartTime = now;
         playerLap++;
+
+        // Trigger Weather Changes and Team Radio Alerts!
+        if (weatherTrend === 'DRY_TO_RAIN' && playerLap === 2 && !isRaining) {
+            setWeatherState(true);
+            playTeamRadio("Rain is falling heavily! Box now for WET tyres!");
+        } else if (weatherTrend === 'RAIN_TO_DRY' && playerLap === 2 && isRaining) {
+            setWeatherState(false);
+            playTeamRadio("Track is drying up rapidly! Box for SOFT tyres!");
+        }
 
         if (playerLap < maxLaps) {
             document.getElementById('lapVal').innerText = `${playerLap + 1} / ${maxLaps}`;
@@ -989,7 +934,7 @@ function updatePhysics() {
         }
     }
 
-    // Rain Particles Follow Camera
+    // Rain Particles Animation
     if (isRaining) {
         const positions = rainPoints.geometry.attributes.position.array;
         for (let i = 1; i < rainCount * 3; i += 3) {
@@ -1006,8 +951,7 @@ function updatePhysics() {
         const dir = new THREE.Vector3().subVectors(nextPt, pt).normalize();
         const norm = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
         
-        const aiPos = pt.clone().add(norm.multiplyScalar(ai.offset));
-        ai.obj.group.position.copy(aiPos);
+        ai.obj.group.position.copy(pt.clone().add(norm.multiplyScalar(ai.offset)));
         ai.obj.group.rotation.y = Math.atan2(dir.x, dir.z);
         ai.obj.wheels.forEach(w => w.rotation.x += ai.speed * 0.4);
     });
@@ -1043,7 +987,6 @@ function updateHUDTelemetry(speedKmh, isAccel, isBrake) {
 
     document.getElementById('thrBar').style.width = isAccel ? '100%' : '0%';
     document.getElementById('brkBar').style.width = isBrake ? '100%' : '0%';
-    document.getElementById('ersBar').style.width = `${ersBattery}%`;
     document.getElementById('wearVal').innerText = `${Math.round(tireWear)}%`;
 }
 
@@ -1053,23 +996,10 @@ function changeTire(newCompound) {
 
     currentTire = newCompound;
     tireWear = 100.0;
-    carDamage = 0.0; // Repair damage
-    playerObj.fWing.rotation.z = 0;
-    document.getElementById('damageVal').innerText = '0%';
-    document.getElementById('damageVal').style.color = '#22c55e';
     updateTireUI();
 
     document.getElementById('pitModal').style.display = 'none';
-    const pitBanner = document.getElementById('pitLightBanner');
-    const pitRed = document.getElementById('pitRedLight');
-    const pitGreen = document.getElementById('pitGreenLight');
-    const pitText = document.getElementById('pitStatusText');
-
-    pitBanner.style.display = 'flex';
-    pitRed.className = 'pit-light-dot pit-light-red';
-    pitGreen.className = 'pit-light-dot';
-    pitText.innerText = 'PIT CREW REPAIRING & SWAPPING TIRES...';
-    playImpactWrenchSFX();
+    playTeamRadio("Good pit stop! Push hard on out-lap!");
 
     const carPos = playerObj.group.position;
     const wheelTargets = [
@@ -1104,18 +1034,11 @@ function changeTire(newCompound) {
                         member.position.set(pitCrewIdleOffsets[i].x, 0, pitCrewIdleOffsets[i].z);
                     });
 
-                    pitRed.className = 'pit-light-dot';
-                    pitGreen.className = 'pit-light-dot pit-light-green';
-                    pitText.innerText = 'GO GO GO!';
-
-                    setTimeout(() => {
-                        pitBanner.style.display = 'none';
-                        speed = 0.55;
-                        carPos.x += 12;
-                        inPit = false;
-                        isPitChanging = false;
-                        pitCooldown = true;
-                    }, 600);
+                    speed = 0.55;
+                    carPos.x += 12;
+                    inPit = false;
+                    isPitChanging = false;
+                    pitCooldown = true;
                 }, 700);
             }, 1800);
         }
@@ -1128,9 +1051,7 @@ function calculateStandings(playerProgress) {
         ...aiCars.map(ai => ({ name: ai.name, score: ai.lap + ai.progress, isPlayer: false }))
     ];
     standings.sort((a, b) => b.score - a.score);
-
     const rank = standings.findIndex(s => s.isPlayer) + 1;
-    const suffix = rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th';
     document.getElementById('posVal').innerText = `P${rank} / 4`;
 }
 
