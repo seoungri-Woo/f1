@@ -2,18 +2,18 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="EA SPORTS F1® 25 - Full Edition",
+    page_title="EA SPORTS F1® 25 - Clean Pit Lane Edition",
     page_icon="🏎️",
     layout="wide"
 )
 
-st.title("🏎️ EA SPORTS F1® 25: 2026 ULTIMATE CHAMPIONSHIP")
+st.title("🏎️ EA SPORTS F1® 25: 2026 ULTIMATE GRAND PRIX")
 st.markdown("""
-**[수정 및 보완 완료 기능]**
-- 🛡️ **양쪽 3D 가드레일:** 트랙 좌우 양쪽에 은색 3D 가드레일과 스폰서 배너가 1인칭 시야에 명확히 표시됩니다.
-- 🚀 **`[Shift]` ERS 부스터:** Shift 키를 누르고 있으면 배터리를 차출하여 폭발적으로 가속합니다 (FOV 75° 확대).
-- ⛔ **트랙 이탈 감속:** 잔디밭으로 이탈 시 최고 속도가 **시속 70 km/h**로 제한됩니다.
-- 🌧️ **날씨 예보 & WET 타이어:** 비가 오면 WET 타이어만 정속 주행 가능하며, 📻 F1 팀 라디오 무전이 상황을 알려줍니다.
+**[버그 수정 및 시스템 내역]**
+- 🛑 **피트 레이인 방해물 완전 제거:** 피트 도로 한가운데를 막고 있던 방호벽 기둥 및 스폰서 배너 구조물을 제거하여 피트 도로가 깨끗이 정돈되었습니다.
+- 🛡️ **입체 3D 가드레일:** 서킷 전체 트랙에는 은색 3D 방호벽이 도열하여 1인칭 시야가 또렷해집니다.
+- 🚀 **`[Shift]` ERS 부스터:** Shift 키 입력 시 배터리를 사용해 폭발 가속을 실행합니다 (FOV 75° 확대).
+- ⛔ **트랙 이탈 감속:** 잔디밭 이탈 시 최고 속도가 **시속 70 km/h**로 제한됩니다.
 """)
 
 game_3d_html = """
@@ -479,7 +479,7 @@ grass.rotation.x = -Math.PI / 2;
 grass.position.y = -0.05;
 scene.add(grass);
 
-// --- 3D Track & Guardrails & Sponsor Banners ---
+// --- 3D Track & Clean Guardrail System ---
 const trackPoints = [
     new THREE.Vector3(-250, 0, 220),
     new THREE.Vector3(250, 0, 220),
@@ -541,11 +541,11 @@ function build3DTrackAndGuardrails() {
             kerbIndices.push(k1 + 2, k1 + 3, k2 + 2, k1 + 3, k2 + 3, k2 + 2);
         }
 
-        // 🛡️ BOTH INNER & OUTER 3D METALLIC GUARDRAILS (Dense spacing for 1st person view!)
+        // 🛡️ 3D GUARDRAILS WITH PIT LANE EXCLUSION FILTER!
         if (i % 4 === 0) {
             const rotY = Math.atan2(dir.x, dir.z);
 
-            // Outer Guardrail (Left)
+            // Outer Guardrail (Left Side)
             const lPos = p1.clone().add(norm.clone().multiplyScalar(ROAD_WIDTH / 2 + 4.5));
             const lRail = new THREE.Mesh(new THREE.BoxGeometry(5.2, 1.4, 0.35), guardrailMat);
             lRail.position.set(lPos.x, 1.4, lPos.z);
@@ -556,18 +556,21 @@ function build3DTrackAndGuardrails() {
             lPost.position.set(lPos.x, 1.4, lPos.z);
             scene.add(lPost);
 
-            // Inner Guardrail (Right)
-            const rPos = p1.clone().add(norm.clone().multiplyScalar(-ROAD_WIDTH / 2 - 4.5));
-            const rRail = new THREE.Mesh(new THREE.BoxGeometry(5.2, 1.4, 0.35), guardrailMat);
-            rRail.position.set(rPos.x, 1.4, rPos.z);
-            rRail.rotation.y = rotY;
-            scene.add(rRail);
+            // Inner Guardrail (Right Side) - FILTER OUT PIT LANE SECTION SO IT DOES NOT BLOCK PIT ROAD!
+            const isNearPitLane = (p1.z > 200 && p1.z < 265 && p1.x > -90 && p1.x < 140);
+            if (!isNearPitLane) {
+                const rPos = p1.clone().add(norm.clone().multiplyScalar(-ROAD_WIDTH / 2 - 4.5));
+                const rRail = new THREE.Mesh(new THREE.BoxGeometry(5.2, 1.4, 0.35), guardrailMat);
+                rRail.position.set(rPos.x, 1.4, rPos.z);
+                rRail.rotation.y = rotY;
+                scene.add(rRail);
 
-            const rPost = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 2.8), postMat);
-            rPost.position.set(rPos.x, 1.4, rPos.z);
-            scene.add(rPost);
+                const rPost = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 2.8), postMat);
+                rPost.position.set(rPos.x, 1.4, rPos.z);
+                scene.add(rPost);
+            }
 
-            // 🏢 Sponsor Banner Attachment (Every 16 segments)
+            // Sponsor Banners (Outer side)
             if (i % 16 === 0) {
                 const sponsorTex = sponsorTextures[(i / 16) % sponsorTextures.length];
                 const bannerMesh = new THREE.Mesh(
@@ -880,14 +883,14 @@ function updatePhysics() {
     const aeroSpeedBoost = activeAeroXMode ? 1.14 : 0.96;
     let maxSpeed = 0.98 * spec.speedMult * aeroSpeedBoost * ersMult * weatherPenalty;
 
-    // ⛔ OFF-TRACK DETECTION (70 KM/H STRICT SPEED LIMIT)
+    // ⛔ OFF-TRACK DETECTION (STRICT 70 KM/H LIMIT ON GRASS)
     const carPos = playerObj.group.position;
     const currentProgress = getTrackProgress(carPos);
     const closestPoint = trackCurve.getPointAt(currentProgress % 1);
 
     const distFromCenter = carPos.distanceTo(closestPoint);
     const isOffTrack = (distFromCenter > ROAD_WIDTH / 2 + 1.2) && (carPos.z < 235);
-    const OFF_TRACK_MAX_SPEED = 70 / 310; // 70 km/h in world scale (approx 0.225)
+    const OFF_TRACK_MAX_SPEED = 70 / 310; // 70 km/h in world scale
 
     if (isOffTrack) {
         document.getElementById('offTrackWarning').style.display = 'block';
@@ -895,7 +898,7 @@ function updatePhysics() {
             maxSpeed = OFF_TRACK_MAX_SPEED;
         }
         if (speed > OFF_TRACK_MAX_SPEED) {
-            speed *= 0.92; // Rapid deceleration to 70 km/h
+            speed *= 0.92;
         }
     } else {
         document.getElementById('offTrackWarning').style.display = 'none';
@@ -934,7 +937,7 @@ function updatePhysics() {
 
     playerObj.wheels.forEach(w => w.rotation.x += speed * 0.5);
 
-    // Dynamic Camera View & ERS Dynamic FOV (75deg on Boost)
+    // Dynamic Camera View & ERS Dynamic FOV
     const targetFov = (isErsBoosting || activeAeroXMode) ? 75 : 55;
     camera.fov += (targetFov - camera.fov) * 0.1;
     camera.updateProjectionMatrix();
